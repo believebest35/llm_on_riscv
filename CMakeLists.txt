@@ -10,6 +10,7 @@ include(cmake/compiler.cmake)
 option(BUILD_TESTS "Build unit tests" ON)
 
 add_subdirectory(src)
+add_subdirectory(third_party/eigen)
 
 if (BUILD_TESTS)
     enable_testing()
