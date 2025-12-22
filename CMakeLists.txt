@@ -11,6 +11,7 @@ option(BUILD_TESTS "Build unit tests" ON)
 
 add_subdirectory(src)
 add_subdirectory(third_party/eigen)
+add_subdirectory(third_party/gtest)
 
 if (BUILD_TESTS)
     enable_testing()

@@ -1,9 +1,7 @@
-#include <cassert>
-
+#include <gtest/gtest.h>
 #include "core/hello.h"
 
-int main() {
+TEST(HelloTest, Basic) {
   say_hello();
-  assert(true);
-  return 0;
+  SUCCEED();
 }
