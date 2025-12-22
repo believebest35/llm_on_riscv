@@ -1,5 +1,6 @@
-#include "core/hello.h"
 #include <cassert>
+
+#include "core/hello.h"
 
 int main() {
   say_hello();
