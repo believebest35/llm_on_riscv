@@ -1,0 +1,25 @@
+---
+Language: Cpp
+BasedOnStyle: Google
+
+AccessModifierOffset: -1
+AlignAfterOpenBracket: Align
+AlignOperands: true
+AlignTrailingComments: true
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+
+ColumnLimit: 80
+IndentWidth: 2
+ContinuationIndentWidth: 4
+
+BreakBeforeBraces: Attach
+
+FixNamespaceComments: true
+
+SortIncludes: true
+
+Standard: Latest
+UseTab: Never
