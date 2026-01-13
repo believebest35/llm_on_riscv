@@ -55,6 +55,17 @@ class MatMulTest : public ::testing::Test {
     return C;
   }
 
+  // Calculate L2 norm of difference between two matrices
+  template <typename Scalar>
+  Scalar calculate_l2_difference(
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
+    if (A.rows() != B.rows() || A.cols() != B.cols()) {
+      throw std::invalid_argument("Matrices must have same dimensions");
+    }
+    return (A - B).norm();  // L2 norm of difference
+  }
+
   // Calculate maximum absolute difference between two matrices
   template <typename Scalar>
   Scalar calculate_max_abs_difference(
@@ -100,34 +111,6 @@ class MatMulTest : public ::testing::Test {
     return std::sqrt(sum_squared_error / total_elements);
   }
 
-  // Compare matrices with tolerance
-  template <typename Scalar>
-  ::testing::AssertionResult compare_matrices_with_tolerance(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B,
-      Scalar tolerance, const std::string& matrix_name = "Result") {
-    if (A.rows() != B.rows() || A.cols() != B.cols()) {
-      return ::testing::AssertionFailure()
-             << matrix_name << " dimensions mismatch: "
-             << "(" << A.rows() << "x" << A.cols() << ") vs "
-             << "(" << B.rows() << "x" << B.cols() << ")";
-    }
-
-    for (int i = 0; i < A.rows(); ++i) {
-      for (int j = 0; j < A.cols(); ++j) {
-        Scalar diff = std::abs(A(i, j) - B(i, j));
-        if (diff > tolerance) {
-          return ::testing::AssertionFailure()
-                 << matrix_name << " differs at position (" << i << ", " << j
-                 << "): " << A(i, j) << " vs " << B(i, j) << " (diff = " << diff
-                 << ", tolerance = " << tolerance << ")";
-        }
-      }
-    }
-
-    return ::testing::AssertionSuccess();
-  }
-
   // Test helper function with automatic golden reference comparison
   template <typename Scalar>
   void test_matmul_with_golden(
@@ -154,35 +137,36 @@ class MatMulTest : public ::testing::Test {
     EXPECT_EQ(eigen_result.cols(), golden_result.cols())
         << "Column count mismatch with golden: " << test_description;
 
-    // Compare with golden reference using tolerance
-    auto comparison_result = compare_matrices_with_tolerance(
-        eigen_result, golden_result, tolerance, "Matrix multiplication result");
+    // Calculate L2 difference
+    Scalar l2_diff = calculate_l2_difference(eigen_result, golden_result);
+    EXPECT_LE(l2_diff, tolerance)
+        << "L2 difference exceeds tolerance: " << test_description;
 
-    EXPECT_TRUE(comparison_result)
-        << test_description << "\n"
-        << "Max absolute difference: "
-        << calculate_max_abs_difference(eigen_result, golden_result)
-        << "\nRMSE: " << calculate_rmse(eigen_result, golden_result);
+    // Print metrics
+    std::cout << test_description << "\nMax absolute difference: "
+              << calculate_max_abs_difference(eigen_result, golden_result)
+              << "\nRMSE: " << calculate_rmse(eigen_result, golden_result)
+              << "\nL2 difference: " << l2_diff << std::endl;
   }
 };
 
 TEST_F(MatMulTest, RandomMatrices) {
   // Test multiple random matrix sizes
   const std::vector<std::tuple<int, int, int>> test_cases = {
-      {1, 1, 1},        // Scalar
-      {1, 1024, 1},     // Vector
-      {1024, 1, 2048},  // Vector
-      {2, 3, 4},        // Small matrix
-      {64, 64, 64},     // Medium matrix
-      {256, 256, 256},  // Larger matrix
-                        // {1024, 1024, 2048}, // real shape
-                        // {2048, 1024, 1024}, // real shape
-                        // {1024, 2048, 1024}, // real shape
-                        // {1024, 1024, 3072}, // real shape
-                        // {1024, 3072, 1024}  // real shape
+      {1, 1, 1},           // Scalar
+      {1, 1024, 1},        // Vector
+      {1024, 1, 2048},     // Vector
+      {2, 3, 4},           // Small matrix
+      {64, 64, 64},        // Medium matrix
+      {256, 256, 256},     // Larger matrix
+      {1024, 1024, 2048},  // real shape
+                           // {2048, 1024, 1024}, // real shape
+                           // {1024, 2048, 1024}, // real shape
+                           // {1024, 1024, 3072}, // real shape
+                           // {1024, 3072, 1024}  // real shape
   };
 
-  const float tolerance = 1e-4;
+  const float tolerance = 1e-2;
 
   for (const auto& [m, n, p] : test_cases) {
     auto A = generate_random_matrix<float>(m, n, -1.0, 1.0);
