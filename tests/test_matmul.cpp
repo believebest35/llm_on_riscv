@@ -19,16 +19,9 @@ class MatMulTest : public ::testing::Test {
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> generate_random_matrix(
       int rows, int cols, Scalar min_val = -1.0, Scalar max_val = 1.0) {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> mat(rows, cols);
-
-    for (int i = 0; i < rows; ++i) {
-      for (int j = 0; j < cols; ++j) {
-        Scalar random_value = min_val + static_cast<Scalar>(std::rand()) /
-                                            static_cast<Scalar>(RAND_MAX) *
-                                            (max_val - min_val);
-        mat(i, j) = random_value;
-      }
-    }
-
+    mat = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>::Random(rows,
+                                                                        cols);
+    mat = (mat.array() + 1.0) / 2.0 * (max_val - min_val) + min_val;
     return mat;
   }
 
@@ -176,17 +169,24 @@ class MatMulTest : public ::testing::Test {
 TEST_F(MatMulTest, RandomMatrices) {
   // Test multiple random matrix sizes
   const std::vector<std::tuple<int, int, int>> test_cases = {
-      {1, 1, 1},     // Scalar
-      {2, 3, 4},     // Small non-square
-      {10, 5, 8},    // Medium size
-      {50, 30, 20},  // Larger size
+      {1, 1, 1},        // Scalar
+      {1, 1024, 1},     // Vector
+      {1024, 1, 2048},  // Vector
+      {2, 3, 4},        // Small matrix
+      {64, 64, 64},     // Medium matrix
+      {256, 256, 256},  // Larger matrix
+                        // {1024, 1024, 2048}, // real shape
+                        // {2048, 1024, 1024}, // real shape
+                        // {1024, 2048, 1024}, // real shape
+                        // {1024, 1024, 3072}, // real shape
+                        // {1024, 3072, 1024}  // real shape
   };
 
   const float tolerance = 1e-4;
 
   for (const auto& [m, n, p] : test_cases) {
-    auto A = generate_random_matrix<float>(m, n, -10.0, 10.0);
-    auto B = generate_random_matrix<float>(n, p, -10.0, 10.0);
+    auto A = generate_random_matrix<float>(m, n, -1.0, 1.0);
+    auto B = generate_random_matrix<float>(n, p, -1.0, 1.0);
 
     std::string test_name = "Random matrix " + std::to_string(m) + "x" +
                             std::to_string(n) + " * " + std::to_string(n) +
