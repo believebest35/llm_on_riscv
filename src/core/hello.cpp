@@ -1,10 +1,8 @@
 #include "hello.h"
 
-#include <Eigen/Dense>
 #include <iostream>
 
-#include "Eigen/Core"
-#include "matmul.h"
+#include "Eigen/Dense"
 
 void say_hello() {
   std::cout << "Hello from core library" << std::endl;
