@@ -6,36 +6,10 @@
 #include <vector>
 
 #include "core/simplified_layernorm.h"
+#include "gtest_base.h"
 
-class SimplifiedLayerNormTest : public ::testing::Test {
+class SimplifiedLayerNormTest : public GTestBase {
  protected:
-  void SetUp() override { std::srand(42); }
-
-  template <typename Scalar>
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> generate_random_matrix(
-      int rows, int cols, Scalar min_val = static_cast<Scalar>(-1.0),
-      Scalar max_val = static_cast<Scalar>(1.0)) {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> mat(rows, cols);
-    mat = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>::Random(rows,
-                                                                        cols);
-    mat = (mat.array() + static_cast<Scalar>(1.0)) / static_cast<Scalar>(2.0) *
-              (max_val - min_val) +
-          min_val;
-    return mat;
-  }
-
-  template <typename Scalar>
-  Eigen::Matrix<Scalar, Eigen::Dynamic, 1> generate_random_vector(
-      int size, Scalar min_val = static_cast<Scalar>(-1.0),
-      Scalar max_val = static_cast<Scalar>(1.0)) {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, 1> vec(size);
-    vec = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>::Random(size);
-    vec = (vec.array() + static_cast<Scalar>(1.0)) / static_cast<Scalar>(2.0) *
-              (max_val - min_val) +
-          min_val;
-    return vec;
-  }
-
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_reference_sln(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
@@ -62,10 +36,24 @@ class SimplifiedLayerNormTest : public ::testing::Test {
   }
 
   template <typename Scalar>
-  Scalar l2_norm_diff(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
-    return (A - B).norm();
+  void test_with_golden(
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& weight, Scalar epsilon,
+      Scalar tolerance, const std::string& test_description = "") {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
+    ASSERT_NO_THROW(impl_result =
+                        simplified_layer_normalization(X, weight, epsilon))
+        << "Implementation failed: " << test_description;
+
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
+    ASSERT_NO_THROW(golden_result = golden_reference_sln(X, weight, epsilon))
+        << "Golden reference failed: " << test_description;
+
+    EXPECT_EQ(impl_result.rows(), golden_result.rows());
+    EXPECT_EQ(impl_result.cols(), golden_result.cols());
+
+    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
+    EXPECT_LE(l2_diff, tolerance) << "L2 diff too large: " << test_description;
   }
 };
 
@@ -91,20 +79,10 @@ TEST_F(SimplifiedLayerNormTest, RandomMatricesMatchGolden) {
     auto X = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
     auto w = generate_random_vector<float>(cols, 0.5f, 1.5f);
 
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> y_impl;
-    ASSERT_NO_THROW(y_impl = simplified_layer_normalization(X, w, epsilon))
-        << "impl threw for shape " << rows << "x" << cols;
+    std::string test_name =
+        "Shape " + std::to_string(rows) + "x" + std::to_string(cols);
 
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> y_gold;
-    ASSERT_NO_THROW(y_gold = golden_reference_sln(X, w, epsilon))
-        << "golden threw for shape " << rows << "x" << cols;
-
-    EXPECT_EQ(y_impl.rows(), y_gold.rows());
-    EXPECT_EQ(y_impl.cols(), y_gold.cols());
-
-    const float l2 = l2_norm_diff(y_impl, y_gold);
-    EXPECT_LE(l2, tolerance) << "L2 diff too large for shape " << rows << "x"
-                             << cols << ", l2=" << l2;
+    test_with_golden(X, w, epsilon, tolerance, test_name);
   }
 }
 
