@@ -22,6 +22,10 @@ add_executable(test_shape
     test_shape.cpp
 )
 
+add_executable(test_constant
+    test_constant.cpp
+)
+
 target_link_libraries(test_hello
     PRIVATE
         core
@@ -71,6 +75,13 @@ target_link_libraries(test_shape
         gtest_main
 )
 
+target_link_libraries(test_constant
+    PRIVATE
+        core
+        gtest
+        gtest_main
+)
+
 add_test(NAME hello_test COMMAND test_hello)
 add_test(NAME matmul_test COMMAND test_matmul)
 add_test(NAME mul_test COMMAND test_mul)
@@ -78,3 +89,4 @@ add_test(NAME simplified_layernorm_test COMMAND test_simplified_layernorm)
 add_test(NAME skip_simplified_layernorm_test COMMAND test_skip_simplified_layernorm)
 add_test(NAME add_test COMMAND test_add)
 add_test(NAME shape_test COMMAND test_shape)
+add_test(NAME constant_test COMMAND test_constant)
