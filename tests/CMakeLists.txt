@@ -26,6 +26,10 @@ add_executable(test_constant
     test_constant.cpp
 )
 
+add_executable(test_gather
+    test_gather.cpp
+)
+
 target_link_libraries(test_hello
     PRIVATE
         core
@@ -82,6 +86,13 @@ target_link_libraries(test_constant
         gtest_main
 )
 
+target_link_libraries(test_gather
+    PRIVATE
+        core
+        gtest
+        gtest_main
+)
+
 add_test(NAME hello_test COMMAND test_hello)
 add_test(NAME matmul_test COMMAND test_matmul)
 add_test(NAME mul_test COMMAND test_mul)
@@ -90,3 +101,4 @@ add_test(NAME skip_simplified_layernorm_test COMMAND test_skip_simplified_layern
 add_test(NAME add_test COMMAND test_add)
 add_test(NAME shape_test COMMAND test_shape)
 add_test(NAME constant_test COMMAND test_constant)
+add_test(NAME gather_test COMMAND test_gather)
