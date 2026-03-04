@@ -34,6 +34,10 @@ add_executable(test_transpose
     test_transpose.cpp
 )
 
+add_executable(test_reduce_sum
+    test_reduce_sum.cpp
+)
+
 target_link_libraries(test_hello
     PRIVATE
         core
@@ -104,6 +108,13 @@ target_link_libraries(test_transpose
         gtest_main
 )
 
+target_link_libraries(test_reduce_sum
+    PRIVATE
+        core
+        gtest
+        gtest_main
+)
+
 add_test(NAME hello_test COMMAND test_hello)
 add_test(NAME matmul_test COMMAND test_matmul)
 add_test(NAME mul_test COMMAND test_mul)
@@ -114,3 +125,4 @@ add_test(NAME shape_test COMMAND test_shape)
 add_test(NAME constant_test COMMAND test_constant)
 add_test(NAME gather_test COMMAND test_gather)
 add_test(NAME transpose_test COMMAND test_transpose)
+add_test(NAME reduce_sum_test COMMAND test_reduce_sum)
