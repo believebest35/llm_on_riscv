@@ -58,6 +58,10 @@ add_executable(test_reshape
     test_reshape.cpp
 )
 
+add_executable(test_sigmoid
+    test_sigmoid.cpp
+)
+
 target_link_libraries(test_hello
     PRIVATE
         core
@@ -170,6 +174,13 @@ target_link_libraries(test_reshape
         gtest_main
 )
 
+target_link_libraries(test_sigmoid
+    PRIVATE
+        core
+        gtest
+        gtest_main
+)
+
 add_test(NAME hello_test COMMAND test_hello)
 add_test(NAME matmul_test COMMAND test_matmul)
 add_test(NAME mul_test COMMAND test_mul)
@@ -186,3 +197,4 @@ add_test(NAME sub_test COMMAND test_sub)
 add_test(NAME cast_test COMMAND test_cast)
 add_test(NAME concat_test COMMAND test_concat)
 add_test(NAME reshape_test COMMAND test_reshape)
+add_test(NAME sigmoid_test COMMAND test_sigmoid)
