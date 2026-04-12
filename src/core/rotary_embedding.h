@@ -101,6 +101,8 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> rotary_embedding(
 
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(rows, hidden_dim);
   Eigen::Matrix<Scalar, 1, Eigen::Dynamic> rh(1, head_dim);
+  Eigen::Matrix<Scalar, 1, Eigen::Dynamic> cos_full(1, head_dim);
+  Eigen::Matrix<Scalar, 1, Eigen::Dynamic> sin_full(1, head_dim);
 
   for (Eigen::Index r = 0; r < rows; ++r) {
     int pos = 0;
@@ -115,20 +117,17 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> rotary_embedding(
           " out of cache bounds [0, " + std::to_string(cos_cache.rows()) + ")");
     }
 
-    auto cos_half = cos_cache.row(pos);
-    auto sin_half = sin_cache.row(pos);
+    cos_full.leftCols(rope_dim) = cos_cache.row(pos);
+    cos_full.rightCols(rope_dim) = cos_cache.row(pos);
+    sin_full.leftCols(rope_dim) = sin_cache.row(pos);
+    sin_full.rightCols(rope_dim) = sin_cache.row(pos);
 
     for (int h = 0; h < num_heads; ++h) {
       const Eigen::Index off = h * head_dim;
       auto x = input.row(r).segment(off, head_dim);
       rotary_rotate_half_row<Scalar>(x, rh);
-      for (Eigen::Index i = 0; i < rope_dim; ++i) {
-        const Scalar c = cos_half(i);
-        const Scalar s = sin_half(i);
-        output(r, off + i) = x(i) * c + rh(i) * s;
-        output(r, off + rope_dim + i) =
-            x(rope_dim + i) * c + rh(rope_dim + i) * s;
-      }
+      output.row(r).segment(off, head_dim).array() =
+          x.array() * cos_full.array() + rh.array() * sin_full.array();
     }
   }
   return output;

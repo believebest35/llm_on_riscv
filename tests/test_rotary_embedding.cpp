@@ -16,13 +16,14 @@ class RotaryEmbeddingTest : public GTestBase {
     const int rope_dim = head_dim / 2;
     Eigen::Matrix<Scalar, 1, Eigen::Dynamic> rh(1, head_dim);
     rotary_rotate_half_row<Scalar>(x, rh);
+    Eigen::Matrix<Scalar, 1, Eigen::Dynamic> cos_full(1, head_dim);
+    Eigen::Matrix<Scalar, 1, Eigen::Dynamic> sin_full(1, head_dim);
+    cos_full.leftCols(rope_dim) = cos_half;
+    cos_full.rightCols(rope_dim) = cos_half;
+    sin_full.leftCols(rope_dim) = sin_half;
+    sin_full.rightCols(rope_dim) = sin_half;
     Eigen::Matrix<Scalar, 1, Eigen::Dynamic> y(1, head_dim);
-    for (int i = 0; i < rope_dim; ++i) {
-      const Scalar c = cos_half(i);
-      const Scalar s = sin_half(i);
-      y(i) = x(i) * c + rh(i) * s;
-      y(rope_dim + i) = x(rope_dim + i) * c + rh(rope_dim + i) * s;
-    }
+    y.array() = x.array() * cos_full.array() + rh.array() * sin_full.array();
     return y;
   }
 };
