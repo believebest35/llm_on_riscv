@@ -1,189 +1,226 @@
 #include <gtest/gtest.h>
 
+#include <Eigen/Dense>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
 #include <tuple>
 
 #include "core/group_query_attention.h"
-#include "gtest_base.h"
 
-class GroupQueryAttentionTest : public GTestBase {
- protected:
-  template <typename Scalar>
-  std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
-             Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
-             Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>>
-  golden_reference(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& Q,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& K,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& V,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_k,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_v,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& bias,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& mask_index,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& unused1,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& unused2) {
-    // replicate the simple logic from the implementation
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y = Q;
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_k;
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_v;
+namespace {
 
-    present_k.resize(past_k.rows() + K.rows(), K.cols());
-    present_v.resize(past_v.rows() + V.rows(), V.cols());
+constexpr int kNumQueryHeads = 16;
+constexpr int kNumKvHeads = 8;
+constexpr int kHeadDim = 128;
+constexpr int kQueryHidden = kNumQueryHeads * kHeadDim;
+constexpr int kKvHidden = kNumKvHeads * kHeadDim;
 
-    if (past_k.rows() > 0) {
-      present_k.topRows(past_k.rows()) = past_k;
-    }
-    if (past_v.rows() > 0) {
-      present_v.topRows(past_v.rows()) = past_v;
-    }
-    present_k.bottomRows(K.rows()) = K;
-    present_v.bottomRows(V.rows()) = V;
+template <typename Scalar>
+Scalar almost_equal_eps() { return static_cast<Scalar>(1e-5); }
 
-    return {Y, present_k, present_v};
-  }
-
-  template <typename Scalar>
-  void test_with_golden(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& Q,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& K,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& V,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_k,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_v,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& bias,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& mask_index,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& unused1,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& unused2,
-      const std::string& desc = "") {
-    std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
-               Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
-               Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>>
-        impl;
-    ASSERT_NO_THROW(
-        impl = group_query_attention<Scalar>(Q, K, V, past_k, past_v, bias,
-                                             mask_index, unused1, unused2))
-        << "implementation threw: " << desc;
-
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_Y;
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_pk;
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_pv;
-    std::tie(impl_Y, impl_pk, impl_pv) = impl;
-
-    std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
-               Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
-               Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>>
-        golden;
-    ASSERT_NO_THROW(golden =
-                        golden_reference<Scalar>(Q, K, V, past_k, past_v, bias,
-                                                 mask_index, unused1, unused2))
-        << "golden threw: " << desc;
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> gold_Y;
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> gold_pk;
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> gold_pv;
-    std::tie(gold_Y, gold_pk, gold_pv) = golden;
-
-    EXPECT_EQ(impl_Y.rows(), gold_Y.rows()) << "Y row mismatch: " << desc;
-    EXPECT_EQ(impl_Y.cols(), gold_Y.cols()) << "Y col mismatch: " << desc;
-    EXPECT_EQ(impl_pk.rows(), gold_pk.rows()) << "pk row mismatch: " << desc;
-    EXPECT_EQ(impl_pk.cols(), gold_pk.cols()) << "pk col mismatch: " << desc;
-    EXPECT_EQ(impl_pv.rows(), gold_pv.rows()) << "pv row mismatch: " << desc;
-    EXPECT_EQ(impl_pv.cols(), gold_pv.cols()) << "pv col mismatch: " << desc;
-
-    // elementwise compare
-    for (int i = 0; i < impl_Y.size(); ++i) {
-      EXPECT_NEAR(impl_Y.data()[i], gold_Y.data()[i], 1e-6)
-          << "Y value mismatch at " << i << " (" << desc << ")";
-    }
-    for (int i = 0; i < impl_pk.size(); ++i) {
-      EXPECT_NEAR(impl_pk.data()[i], gold_pk.data()[i], 1e-6)
-          << "pk value mismatch at " << i << " (" << desc << ")";
-    }
-    for (int i = 0; i < impl_pv.size(); ++i) {
-      EXPECT_NEAR(impl_pv.data()[i], gold_pv.data()[i], 1e-6)
-          << "pv value mismatch at " << i << " (" << desc << ")";
+template <typename Scalar>
+Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> make_matrix(
+    int rows, int cols, Scalar base) {
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> m(rows, cols);
+  for (int r = 0; r < rows; ++r) {
+    for (int c = 0; c < cols; ++c) {
+      m(r, c) = base + static_cast<Scalar>((r * 7 + c % 17) * 0.01);
     }
   }
-};
-
-TEST_F(GroupQueryAttentionTest, Simple) {
-  // choose small dims: rows 2, Qdim=4, Kdim=2
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> Q(2, 4);
-  Q << 1, 2, 3, 4, 5, 6, 7, 8;
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> K(2, 2);
-  K << 1, 1, 2, 2;
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> V(2, 2);
-  V << 3, 3, 4, 4;
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_k(1, 2);
-  past_k << 7, 7;
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_v(1, 2);
-  past_v << 8, 8;
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> bias(1, 1);
-  bias << 0;
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> mask_index(1, 1);
-  mask_index << 1;
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> unused1(0, 0);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> unused2(0, 0);
-  test_with_golden<float>(Q, K, V, past_k, past_v, bias, mask_index, unused1,
-                          unused2, "simple");
+  return m;
 }
 
-TEST_F(GroupQueryAttentionTest, Random) {
-  auto Q = generate_random_matrix<float>(3, 6, -1, 1);
-  // ensure Q.cols == 2 * K.cols
-  auto K = generate_random_matrix<float>(3, 3, -1, 1);
-  auto V = generate_random_matrix<float>(3, 3, -1, 1);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_k(2, 3);
-  past_k.setRandom();
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_v(2, 3);
-  past_v.setRandom();
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> bias(3, 1);
-  bias.setZero();
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> mask_index(1, 1);
-  mask_index << 0;
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> unused1(1, 1);
-  unused1 << 0;
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> unused2(2, 2);
-  unused2.setZero();
-  test_with_golden<float>(Q, K, V, past_k, past_v, bias, mask_index, unused1,
-                          unused2, "random");
+template <typename Scalar>
+void expect_matrix_near(const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& lhs,
+                        const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& rhs) {
+  ASSERT_EQ(lhs.rows(), rhs.rows());
+  ASSERT_EQ(lhs.cols(), rhs.cols());
+  for (int r = 0; r < lhs.rows(); ++r) {
+    for (int c = 0; c < lhs.cols(); ++c) {
+      EXPECT_NEAR(lhs(r, c), rhs(r, c), almost_equal_eps<Scalar>());
+    }
+  }
 }
 
-TEST_F(GroupQueryAttentionTest, ErrorCases) {
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> Q(1, 4);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> K(1, 3);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> V(1, 3);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_k(1, 3);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_v(1, 3);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> bias(1, 2);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> mask_index(2, 2);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> unused1(0, 0);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> unused2(0, 0);
+template <typename Scalar>
+std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
+           Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
+           Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>>
+reference_gqa(
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& query,
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& key,
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& value,
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_key,
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_value,
+    int seqlens_k,
+    int total_sequence_length) {
+  const int sequence = query.rows();
+  const int past_sequence = past_key.rows() / kNumKvHeads;
 
-  // mismatched row counts
-  EXPECT_THROW(group_query_attention<float>(
-                   Q, K, V, past_k, past_v, bias,
-                   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(1, 1),
-                   unused1, unused2),
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_key(
+      kNumKvHeads * total_sequence_length, kHeadDim);
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_value(
+      kNumKvHeads * total_sequence_length, kHeadDim);
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(sequence, kQueryHidden);
+
+  for (int h = 0; h < kNumKvHeads; ++h) {
+    for (int s = 0; s < past_sequence; ++s) {
+      for (int d = 0; d < kHeadDim; ++d) {
+        present_key(h * total_sequence_length + s, d) = past_key(h * past_sequence + s, d);
+        present_value(h * total_sequence_length + s, d) = past_value(h * past_sequence + s, d);
+      }
+    }
+    for (int s = 0; s < sequence; ++s) {
+      for (int d = 0; d < kHeadDim; ++d) {
+        present_key(h * total_sequence_length + past_sequence + s, d) = key(s, h * kHeadDim + d);
+        present_value(h * total_sequence_length + past_sequence + s, d) =
+            value(s, h * kHeadDim + d);
+      }
+    }
+  }
+
+  const Scalar scale = static_cast<Scalar>(1.0 / std::sqrt(static_cast<double>(kHeadDim)));
+  std::vector<Scalar> scores(total_sequence_length, static_cast<Scalar>(0));
+  std::vector<Scalar> probs(total_sequence_length, static_cast<Scalar>(0));
+
+  for (int qh = 0; qh < kNumQueryHeads; ++qh) {
+    const int kvh = qh / 2;
+    for (int qs = 0; qs < sequence; ++qs) {
+      const int causal_limit = past_sequence + qs;
+      Scalar max_score = -std::numeric_limits<Scalar>::infinity();
+
+      for (int ks = 0; ks < total_sequence_length; ++ks) {
+        if (ks > causal_limit || ks >= seqlens_k) {
+          scores[ks] = -std::numeric_limits<Scalar>::infinity();
+          continue;
+        }
+        Scalar dot = static_cast<Scalar>(0);
+        for (int d = 0; d < kHeadDim; ++d) {
+          dot += query(qs, qh * kHeadDim + d) * present_key(kvh * total_sequence_length + ks, d);
+        }
+        scores[ks] = dot * scale;
+        if (scores[ks] > max_score) {
+          max_score = scores[ks];
+        }
+      }
+
+      Scalar sum = static_cast<Scalar>(0);
+      for (int ks = 0; ks < total_sequence_length; ++ks) {
+        if (!std::isfinite(scores[ks])) {
+          probs[ks] = static_cast<Scalar>(0);
+          continue;
+        }
+        probs[ks] = static_cast<Scalar>(std::exp(scores[ks] - max_score));
+        sum += probs[ks];
+      }
+      for (int ks = 0; ks < total_sequence_length; ++ks) {
+        probs[ks] /= sum;
+      }
+
+      for (int d = 0; d < kHeadDim; ++d) {
+        Scalar acc = static_cast<Scalar>(0);
+        for (int ks = 0; ks < total_sequence_length; ++ks) {
+          acc += probs[ks] * present_value(kvh * total_sequence_length + ks, d);
+        }
+        output(qs, qh * kHeadDim + d) = acc;
+      }
+    }
+  }
+
+  return {output, present_key, present_value};
+}
+
+}  // namespace
+
+TEST(GroupQueryAttentionTest, PrefillMatchesReference) {
+  auto query = make_matrix<float>(3, kQueryHidden, 0.1f);
+  auto key = make_matrix<float>(3, kKvHidden, 0.2f);
+  auto value = make_matrix<float>(3, kKvHidden, 0.3f);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_key(0, kHeadDim);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_value(0, kHeadDim);
+  const int seqlens_k = 3;
+
+  auto impl =
+      group_query_attention<float>(query, key, value, past_key, past_value, seqlens_k, 3);
+  auto ref = reference_gqa<float>(query, key, value, past_key, past_value, seqlens_k, 3);
+
+  expect_matrix_near(std::get<0>(impl), std::get<0>(ref));
+  expect_matrix_near(std::get<1>(impl), std::get<1>(ref));
+  expect_matrix_near(std::get<2>(impl), std::get<2>(ref));
+}
+
+TEST(GroupQueryAttentionTest, DecodeMatchesReferenceAndConcatCache) {
+  auto query = make_matrix<float>(1, kQueryHidden, 0.4f);
+  auto key = make_matrix<float>(1, kKvHidden, 0.5f);
+  auto value = make_matrix<float>(1, kKvHidden, 0.6f);
+  auto past_key = make_matrix<float>(kNumKvHeads * 4, kHeadDim, -0.2f);
+  auto past_value = make_matrix<float>(kNumKvHeads * 4, kHeadDim, -0.1f);
+  const int seqlens_k = 5;
+
+  auto impl =
+      group_query_attention<float>(query, key, value, past_key, past_value, seqlens_k, 5);
+  auto ref = reference_gqa<float>(query, key, value, past_key, past_value, seqlens_k, 5);
+
+  expect_matrix_near(std::get<0>(impl), std::get<0>(ref));
+  expect_matrix_near(std::get<1>(impl), std::get<1>(ref));
+  expect_matrix_near(std::get<2>(impl), std::get<2>(ref));
+}
+
+TEST(GroupQueryAttentionTest, GroupMappingUsesHeadPairs) {
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> query(1, kQueryHidden);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> key(1, kKvHidden);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> value(1, kKvHidden);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_key(0, kHeadDim);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_value(0, kHeadDim);
+  const int seqlens_k = 1;
+
+  for (int h = 0; h < kNumQueryHeads; ++h) {
+    for (int d = 0; d < kHeadDim; ++d) {
+      query(0, h * kHeadDim + d) = static_cast<float>(h + 1);
+    }
+  }
+  for (int h = 0; h < kNumKvHeads; ++h) {
+    for (int d = 0; d < kHeadDim; ++d) {
+      key(0, h * kHeadDim + d) = 1.0f;
+      value(0, h * kHeadDim + d) = static_cast<float>(100 + h);
+    }
+  }
+
+  auto impl =
+      group_query_attention<float>(query, key, value, past_key, past_value, seqlens_k, 1);
+
+  const auto& out = std::get<0>(impl);
+  for (int qh = 0; qh < kNumQueryHeads; ++qh) {
+    const int kvh = qh / 2;
+    for (int d = 0; d < kHeadDim; ++d) {
+      EXPECT_NEAR(out(0, qh * kHeadDim + d), static_cast<float>(100 + kvh), 1e-6);
+    }
+  }
+}
+
+TEST(GroupQueryAttentionTest, ThrowsForInvalidShapesAndLengths) {
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> query(2, kQueryHidden);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> key(2, kKvHidden);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> value(2, kKvHidden);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_key(kNumKvHeads, kHeadDim);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> past_value(kNumKvHeads, kHeadDim);
+  const int seqlens_k = 3;
+
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> bad_query_hidden(2, kQueryHidden - 1);
+  EXPECT_THROW(group_query_attention<float>(bad_query_hidden, key, value, past_key, past_value,
+                                            seqlens_k, 3),
                std::invalid_argument);
 
-  // query dim wrong relative to K
-  EXPECT_THROW(group_query_attention<float>(
-                   Q, K, V, past_k, past_v,
-                   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(1, 1),
-                   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(1, 1),
-                   unused1, unused2),
-               std::invalid_argument);
+  EXPECT_THROW(
+      group_query_attention<float>(query, key, value, past_key, past_value, seqlens_k, 100),
+      std::invalid_argument);
 
-  // bias wrong shape
-  EXPECT_THROW(group_query_attention<float>(
-                   Q, K, V, past_k, past_v, bias,
-                   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(1, 1),
-                   unused1, unused2),
+  EXPECT_THROW(group_query_attention<float>(query, key, value, past_key, past_value,
+                                            0, 3),
                std::invalid_argument);
-
-  // mask_index not scalar
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> ok_bias(1, 1);
-  ok_bias << 0;
-  EXPECT_THROW(group_query_attention<float>(Q, K, V, past_k, past_v, ok_bias,
-                                            mask_index, unused1, unused2),
+  EXPECT_THROW(group_query_attention<float>(query, key, value, past_key, past_value,
+                                            4, 3),
                std::invalid_argument);
 }
 

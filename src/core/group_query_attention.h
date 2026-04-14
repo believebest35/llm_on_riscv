@@ -2,98 +2,167 @@
 #define GROUP_QUERY_ATTENTION_H
 
 #include <Eigen/Dense>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <tuple>
+#include <vector>
 
 /**
- * @brief Simplified GroupQueryAttention-like operator for testing.
+ * @brief Group Query Attention kernel for inference.
  *
- * This toy implementation does **not** implement the full semantics of the
- * ONNX `GroupQueryAttention` operator.  It is intentionally minimal: the
- * output tensor Y is simply a copy of the input queries, and the present
- * key/value caches are produced by concatenating the provided past state
- * with the current keys/values along the first (row) dimension.
+ * Note: this implementation is specialized for batch_size == 1.
  *
- * The function accepts nine input matrices corresponding to the typical
- * inputs of the ONNX node.  Inputs which are not used by the simple
- * reference implementation (bias, mask_index, and two optional "unused"
- * tensors) are validated only for their expected shapes.
+ * Shapes:
+ * - query:      (sequence, 2048) = (S, num_query_heads * head_dim)
+ * - key/value:  (sequence, 1024) = (S, num_kv_heads * head_dim)
+ * - past_key/v: (8 * past_sequence, 128)
+ * - seqlens_k:  scalar, valid KV length after concat
+ * - total_sequence_length: scalar, must equal past_sequence + sequence
  *
- * This header is paired with a comprehensive unit test that exercises the
- * various shape checks and compares results against a golden reference.
- *
- * @tparam Scalar Numeric type (float, double, etc.)
- * @param Q Queries tensor flattened to 2-D: (batch*sequence) x Qdim
- * @param K Keys tensor flattened to 2-D: (batch*sequence) x Kdim
- * @param V Values tensor flattened to 2-D: (batch*sequence) x Kdim
- * @param past_k Previous key cache: arbitrary number of rows x Kdim
- * @param past_v Previous value cache: arbitrary number of rows x Kdim
- * @param bias Bias tensor, expected to have a single column
- * @param mask_index Attention mask index, must be a scalar matrix (1x1)
- * @param unused1 Placeholder for optional input (ignored)
- * @param unused2 Placeholder for optional input (ignored)
- * @return tuple containing {Y, present_k, present_v}
- * @throws std::invalid_argument when the inputs have incompatible shapes.
+ * Returns:
+ * - output:      (sequence, 2048)
+ * - present_k/v: (8 * total_sequence_length, 128)
  */
-
 template <typename Scalar>
 std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
            Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
            Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>>
 group_query_attention(
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& Q,
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& K,
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& V,
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_k,
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_v,
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& bias,
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& mask_index,
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& unused1,
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& unused2) {
-  // basic dimension checks
-  if (Q.rows() != K.rows() || Q.rows() != V.rows()) {
-    throw std::invalid_argument("Q, K and V must have the same number of rows");
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& query,
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& key,
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& value,
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_key,
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_value,
+    int seqlens_k,
+    int total_sequence_length) {
+  constexpr int kNumQueryHeads = 16;
+  constexpr int kNumKeyValueHeads = 8;
+  constexpr int kHeadDim = 128;
+
+  if (query.rows() <= 0) {
+    throw std::invalid_argument("query sequence length must be positive");
   }
-  if (Q.cols() != 2 * K.cols()) {
+  if (query.rows() != key.rows() || query.rows() != value.rows()) {
+    throw std::invalid_argument("query/key/value must share sequence length");
+  }
+  if (query.cols() != kNumQueryHeads * kHeadDim) {
+    throw std::invalid_argument("query hidden size must be 2048");
+  }
+  if (key.cols() != kNumKeyValueHeads * kHeadDim ||
+      value.cols() != kNumKeyValueHeads * kHeadDim) {
+    throw std::invalid_argument("key/value hidden size must be 1024");
+  }
+  if (past_key.cols() != kHeadDim || past_value.cols() != kHeadDim) {
+    throw std::invalid_argument("past key/value second dimension must be 128");
+  }
+  if (past_key.rows() != past_value.rows()) {
+    throw std::invalid_argument("past key/value rows must match");
+  }
+  if (past_key.rows() % kNumKeyValueHeads != 0) {
+    throw std::invalid_argument("past key/value rows must be divisible by 8");
+  }
+
+  const int sequence = query.rows();
+  const int past_sequence = past_key.rows() / kNumKeyValueHeads;
+
+  if (total_sequence_length != past_sequence + sequence) {
     throw std::invalid_argument(
-        "Query dimension must be twice the key/value dimension");
+        "total_sequence_length must equal past_sequence_length + sequence_length");
   }
-  if (K.cols() != V.cols()) {
-    throw std::invalid_argument("K and V must have the same number of cols");
+  if (total_sequence_length <= 0) {
+    throw std::invalid_argument("total_sequence_length must be positive");
   }
-  if (past_k.cols() != K.cols() || past_v.cols() != V.cols()) {
-    throw std::invalid_argument(
-        "Past key/value caches must have the same number of columns as "
-        "current K/V");
-  }
-  if (bias.cols() != 1) {
-    throw std::invalid_argument("Bias tensor must have one column");
-  }
-  if (mask_index.size() != 1) {
-    throw std::invalid_argument("Mask index must be a scalar");
+  if (seqlens_k <= 0 || seqlens_k > total_sequence_length) {
+    throw std::invalid_argument("seqlens_k value out of valid range");
   }
 
-  // Y is just a copy of Q in this toy implementation
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y = Q;
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_key(
+      kNumKeyValueHeads * total_sequence_length, kHeadDim);
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_value(
+      kNumKeyValueHeads * total_sequence_length, kHeadDim);
 
-  // present_k/v are simple row-wise concatenations of past and current.
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_k;
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_v;
-
-  present_k.resize(past_k.rows() + K.rows(), K.cols());
-  present_v.resize(past_v.rows() + V.rows(), V.cols());
-
-  if (past_k.rows() > 0) {
-    present_k.topRows(past_k.rows()) = past_k;
+  for (int h = 0; h < kNumKeyValueHeads; ++h) {
+    for (int s = 0; s < past_sequence; ++s) {
+      for (int d = 0; d < kHeadDim; ++d) {
+        present_key(h * total_sequence_length + s, d) = past_key(h * past_sequence + s, d);
+        present_value(h * total_sequence_length + s, d) = past_value(h * past_sequence + s, d);
+      }
+    }
+    for (int s = 0; s < sequence; ++s) {
+      const int target_pos = past_sequence + s;
+      const int hidden_base = h * kHeadDim;
+      for (int d = 0; d < kHeadDim; ++d) {
+        present_key(h * total_sequence_length + target_pos, d) = key(s, hidden_base + d);
+        present_value(h * total_sequence_length + target_pos, d) = value(s, hidden_base + d);
+      }
+    }
   }
-  if (past_v.rows() > 0) {
-    present_v.topRows(past_v.rows()) = past_v;
+
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(sequence, kNumQueryHeads * kHeadDim);
+  const Scalar scale = static_cast<Scalar>(1.0 / std::sqrt(static_cast<double>(kHeadDim)));
+  std::vector<Scalar> scores(total_sequence_length, static_cast<Scalar>(0));
+  std::vector<Scalar> probs(total_sequence_length, static_cast<Scalar>(0));
+
+  for (int qh = 0; qh < kNumQueryHeads; ++qh) {
+    const int kvh = qh / 2;
+    const int q_hidden_base = qh * kHeadDim;
+    for (int qs = 0; qs < sequence; ++qs) {
+      const int causal_limit = past_sequence + qs;
+      int valid_count = 0;
+      Scalar max_score = -std::numeric_limits<Scalar>::infinity();
+
+      for (int ks = 0; ks < total_sequence_length; ++ks) {
+        if (ks > causal_limit || ks >= seqlens_k) {
+          scores[ks] = -std::numeric_limits<Scalar>::infinity();
+          continue;
+        }
+
+        Scalar dot = static_cast<Scalar>(0);
+        for (int d = 0; d < kHeadDim; ++d) {
+          dot += query(qs, q_hidden_base + d) * present_key(kvh * total_sequence_length + ks, d);
+        }
+        scores[ks] = dot * scale;
+        if (scores[ks] > max_score) {
+          max_score = scores[ks];
+        }
+        ++valid_count;
+      }
+
+      if (valid_count == 0) {
+        throw std::invalid_argument("no valid key positions after applying masks");
+      }
+
+      Scalar exp_sum = static_cast<Scalar>(0);
+      for (int ks = 0; ks < total_sequence_length; ++ks) {
+        if (!std::isfinite(scores[ks])) {
+          probs[ks] = static_cast<Scalar>(0);
+          continue;
+        }
+        probs[ks] = static_cast<Scalar>(std::exp(scores[ks] - max_score));
+        exp_sum += probs[ks];
+      }
+      if (exp_sum == static_cast<Scalar>(0)) {
+        throw std::invalid_argument("softmax normalization sum became zero");
+      }
+      for (int ks = 0; ks < total_sequence_length; ++ks) {
+        probs[ks] /= exp_sum;
+      }
+
+      for (int d = 0; d < kHeadDim; ++d) {
+        Scalar acc = static_cast<Scalar>(0);
+        for (int ks = 0; ks < total_sequence_length; ++ks) {
+          if (probs[ks] == static_cast<Scalar>(0)) {
+            continue;
+          }
+          acc += probs[ks] * present_value(kvh * total_sequence_length + ks, d);
+        }
+        output(qs, q_hidden_base + d) = acc;
+      }
+    }
   }
 
-  present_k.bottomRows(K.rows()) = K;
-  present_v.bottomRows(V.rows()) = V;
-
-  return {Y, present_k, present_v};
+  return {output, present_key, present_value};
 }
 
 #endif  // GROUP_QUERY_ATTENTION_H
