@@ -9,12 +9,12 @@
  * @brief SkipSimplifiedLayerNormalization: adds skip (residual) to input X and
  * performs simplified layer normalization (RMS-style) over the last dimension.
  *
- * Y = ( (X + skip) / rms ) * weight
+ * Y = ( (X + skip) / rms ) * gamma
  *
  * @tparam Scalar
  * @param X Input matrix (m x n)
  * @param skip Skip/residual matrix (m x n)
- * @param weight Scale vector (n)
+ * @param gamma Scale vector (n)
  * @param epsilon Small constant for numerical stability
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Output (m x n)
  */
@@ -23,18 +23,18 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
 skip_simplified_layer_normalization(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& skip,
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& weight,
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& gamma,
     Scalar epsilon = static_cast<Scalar>(1e-5)) {
   if (X.rows() != skip.rows() || X.cols() != skip.cols()) {
     throw std::invalid_argument(
         "SkipSimplifiedLayerNormalization dimension mismatch: X and skip must "
         "have same shape");
   }
-  if (X.cols() != weight.size()) {
+  if (X.cols() != gamma.size()) {
     throw std::invalid_argument(
         "SkipSimplifiedLayerNormalization dimension mismatch: X.cols() = " +
         std::to_string(X.cols()) +
-        ", weight.size() = " + std::to_string(weight.size()));
+        ", gamma.size() = " + std::to_string(gamma.size()));
   }
   if (epsilon <= static_cast<Scalar>(0)) {
     throw std::invalid_argument("epsilon must be > 0");
@@ -43,12 +43,11 @@ skip_simplified_layer_normalization(
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y(X.rows(), X.cols());
 
   for (int i = 0; i < X.rows(); ++i) {
-    // compute mean squared over last dim for (X+skip)
     const auto row = X.row(i) + skip.row(i);
     const Scalar mean_sq =
         row.array().square().sum() / static_cast<Scalar>(X.cols());
     const Scalar rms = std::sqrt(mean_sq + epsilon);
-    Y.row(i) = (row / rms).cwiseProduct(weight.transpose());
+    Y.row(i) = (row / rms).cwiseProduct(gamma.transpose());
   }
 
   return Y;

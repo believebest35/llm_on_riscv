@@ -10,35 +10,30 @@ class UnsqueezeTest : public GTestBase {
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
   golden_reference_unsqueeze(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
-      int axis) {
-    const int total = static_cast<int>(A.size());
-    if (axis == 0) {
-      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> out(1, total);
-      for (int i = 0; i < total; ++i) {
-        out(0, i) = A.data()[i];
-      }
-      return out;
-    } else if (axis == 1) {
-      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> out(total, 1);
-      for (int i = 0; i < total; ++i) {
-        out(i, 0) = A.data()[i];
-      }
-      return out;
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& data,
+      int axes) {
+    const int N = data.size();
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> expanded;
+    if (axes == 0) {
+      expanded.resize(1, N);
+      expanded.row(0) = data.transpose();
+    } else {
+      expanded.resize(N, 1);
+      expanded.col(0) = data;
     }
-    throw std::invalid_argument("invalid axis");
+    return expanded;
   }
 
   template <typename Scalar>
   void test_with_golden(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A, int axis,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& data, int axes,
       const std::string& desc = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl;
-    ASSERT_NO_THROW(impl = unsqueeze<Scalar>(A, axis))
+    ASSERT_NO_THROW(impl = unsqueeze<Scalar>(data, axes))
         << "implementation threw: " << desc;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden;
-    ASSERT_NO_THROW(golden = golden_reference_unsqueeze<Scalar>(A, axis))
+    ASSERT_NO_THROW(golden = golden_reference_unsqueeze<Scalar>(data, axes))
         << "golden threw: " << desc;
 
     EXPECT_EQ(impl.rows(), golden.rows()) << "row mismatch: " << desc;
@@ -52,26 +47,31 @@ class UnsqueezeTest : public GTestBase {
   }
 };
 
-TEST_F(UnsqueezeTest, SmallMatrices) {
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> A(2, 2);
-  A << 1, 2, 3, 4;
-  test_with_golden<float>(A, 0, "axis0 small");
-  test_with_golden<float>(A, 1, "axis1 small");
+TEST_F(UnsqueezeTest, Axes0) {
+  Eigen::Matrix<float, Eigen::Dynamic, 1> data(4);
+  data << 1, 2, 3, 4;
+  test_with_golden<float>(data, 0, "axes0");
+}
+
+TEST_F(UnsqueezeTest, Axes1) {
+  Eigen::Matrix<float, Eigen::Dynamic, 1> data(4);
+  data << 1, 2, 3, 4;
+  test_with_golden<float>(data, 1, "axes1");
 }
 
 TEST_F(UnsqueezeTest, Random) {
-  std::vector<std::pair<int, int>> dims = {{1, 1}, {1, 5}, {5, 1}, {3, 4}};
-  for (auto [r, c] : dims) {
-    auto M = generate_random_matrix<float>(r, c, -2.0f, 2.0f);
-    test_with_golden<float>(M, 0, "rand axis0");
-    test_with_golden<float>(M, 1, "rand axis1");
+  std::vector<int> sizes = {1, 5, 10, 100};
+  for (int n : sizes) {
+    auto v = generate_random_vector<float>(n, -2.0f, 2.0f);
+    test_with_golden<float>(v, 0, "rand axes0");
+    test_with_golden<float>(v, 1, "rand axes1");
   }
 }
 
-TEST_F(UnsqueezeTest, InvalidAxis) {
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> A(2, 3);
-  A.setRandom();
-  EXPECT_THROW(unsqueeze<float>(A, 2), std::invalid_argument);
+TEST_F(UnsqueezeTest, InvalidAxes) {
+  Eigen::Matrix<float, Eigen::Dynamic, 1> data(5);
+  data.setRandom();
+  EXPECT_THROW(unsqueeze<float>(data, 2), std::invalid_argument);
 }
 
 int main(int argc, char** argv) {

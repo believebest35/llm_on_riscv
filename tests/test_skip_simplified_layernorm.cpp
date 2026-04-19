@@ -14,11 +14,11 @@ class SkipSimplifiedLayerNormTest : public GTestBase {
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_reference(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& skip,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& weight, Scalar epsilon) {
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& gamma, Scalar epsilon) {
     if (X.rows() != skip.rows() || X.cols() != skip.cols()) {
       throw std::invalid_argument("dimension mismatch");
     }
-    if (X.cols() != weight.size()) {
+    if (X.cols() != gamma.size()) {
       throw std::invalid_argument("dimension mismatch");
     }
 
@@ -33,7 +33,7 @@ class SkipSimplifiedLayerNormTest : public GTestBase {
       const Scalar rms = std::sqrt(mean_sq + epsilon);
 
       for (int j = 0; j < X.cols(); ++j) {
-        Y(i, j) = ((X(i, j) + skip(i, j)) / rms) * weight(j);
+        Y(i, j) = ((X(i, j) + skip(i, j)) / rms) * gamma(j);
       }
     }
     return Y;
@@ -43,15 +43,15 @@ class SkipSimplifiedLayerNormTest : public GTestBase {
   void test_with_golden(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& skip,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& weight, Scalar epsilon,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& gamma, Scalar epsilon,
       Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
     ASSERT_NO_THROW(impl_result = skip_simplified_layer_normalization(
-                        X, skip, weight, epsilon))
+                        X, skip, gamma, epsilon))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference(X, skip, weight, epsilon))
+    ASSERT_NO_THROW(golden_result = golden_reference(X, skip, gamma, epsilon))
         << "Golden reference failed: " << test_description;
 
     EXPECT_EQ(impl_result.rows(), golden_result.rows());
@@ -73,12 +73,12 @@ TEST_F(SkipSimplifiedLayerNormTest, RandomMatricesMatchGolden) {
   for (const auto& [rows, cols] : test_cases) {
     auto X = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
     auto skip = generate_random_matrix<float>(rows, cols, -0.5f, 0.5f);
-    auto w = generate_random_vector<float>(cols, 0.5f, 1.5f);
+    auto gamma = generate_random_vector<float>(cols, 0.5f, 1.5f);
 
     std::string test_name =
         "Shape " + std::to_string(rows) + "x" + std::to_string(cols);
 
-    test_with_golden(X, skip, w, epsilon, tolerance, test_name);
+    test_with_golden(X, skip, gamma, epsilon, tolerance, test_name);
   }
 }
 

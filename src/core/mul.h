@@ -10,12 +10,10 @@
  * @tparam Scalar Data type (float, double, etc.)
  * @param A Left matrix (m x n)
  * @param B Right matrix (m x n)
- * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Result matrix
- * (m x n)
+ * @return C Result matrix (m x n)
  */
 template <typename Scalar>
-Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
-matrix_multiply_elementwise(
+Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> matrix_multiply_elementwise(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
   // Validate input dimensions
@@ -29,7 +27,8 @@ matrix_multiply_elementwise(
   }
 
   // Perform element-wise multiplication using Eigen's optimized implementation
-  return A.cwiseProduct(B);
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C = A.cwiseProduct(B);
+  return C;
 }
 
 #endif  // MUL_H

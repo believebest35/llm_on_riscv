@@ -10,13 +10,11 @@
  * @tparam Scalar Data type (float, double, etc.)
  * @param A Left matrix (m x n)
  * @param B Right matrix (m x n)
- * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Result matrix
- * (m x n) containing A - B.
+ * @return C Result matrix (m x n) containing A - B.
  */
 
 template <typename Scalar>
-Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
-matrix_subtract_elementwise(
+Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> matrix_subtract_elementwise(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
   if (A.rows() != B.rows() || A.cols() != B.cols()) {
@@ -28,7 +26,8 @@ matrix_subtract_elementwise(
         ", B.cols() = " + std::to_string(B.cols()));
   }
 
-  return A - B;
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C = A - B;
+  return C;
 }
 
 #endif  // SUB_H

@@ -23,21 +23,21 @@ class SigmoidTest : public GTestBase {
 
   template <typename Scalar>
   void test_with_golden(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
       const std::string& desc = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl;
-    ASSERT_NO_THROW(impl = sigmoid<Scalar>(A))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y;
+    ASSERT_NO_THROW(Y = sigmoid<Scalar>(X))
         << "implementation threw: " << desc;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden;
-    ASSERT_NO_THROW(golden = golden_reference_sigmoid(A))
+    ASSERT_NO_THROW(golden = golden_reference_sigmoid(X))
         << "golden threw: " << desc;
 
-    EXPECT_EQ(impl.rows(), golden.rows()) << "row mismatch: " << desc;
-    EXPECT_EQ(impl.cols(), golden.cols()) << "col mismatch: " << desc;
+    EXPECT_EQ(Y.rows(), golden.rows()) << "row mismatch: " << desc;
+    EXPECT_EQ(Y.cols(), golden.cols()) << "col mismatch: " << desc;
 
-    for (std::int64_t i = 0; i < impl.size(); ++i) {
-      EXPECT_NEAR(impl.data()[i], golden.data()[i], 1e-6)
+    for (std::int64_t i = 0; i < Y.size(); ++i) {
+      EXPECT_NEAR(Y.data()[i], golden.data()[i], 1e-6)
           << "value mismatch at " << i << " (" << desc << ")";
     }
   }

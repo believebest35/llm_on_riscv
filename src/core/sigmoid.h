@@ -10,20 +10,19 @@
  * Works with any scalar type that supports std::exp.
  *
  * @tparam Scalar Element type of the matrix.
- * @param A Input matrix.
- * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix of the
- *         same shape with sigmoid applied element-wise.
+ * @param X Input matrix.
+ * @return Y Output matrix of the same shape with sigmoid applied element-wise.
  */
 
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> sigmoid(
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A) {
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> out = A;
-  for (std::int64_t i = 0; i < out.size(); ++i) {
-    out.data()[i] = static_cast<Scalar>(1) /
-                    (static_cast<Scalar>(1) + std::exp(-out.data()[i]));
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X) {
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y = X;
+  for (std::int64_t i = 0; i < Y.size(); ++i) {
+    Y.data()[i] = static_cast<Scalar>(1) /
+                    (static_cast<Scalar>(1) + std::exp(-Y.data()[i]));
   }
-  return out;
+  return Y;
 }
 
 #endif  // SIGMOID_H

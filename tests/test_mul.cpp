@@ -35,30 +35,30 @@ class MulTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B,
       Scalar tolerance, const std::string& test_description = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result = matrix_multiply_elementwise(A, B))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C;
+    ASSERT_NO_THROW(C = matrix_multiply_elementwise(A, B))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
     ASSERT_NO_THROW(golden_result = golden_reference_elementwise_mul(A, B))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), A.rows())
+    EXPECT_EQ(C.rows(), A.rows())
         << "Result rows incorrect: " << test_description;
-    EXPECT_EQ(impl_result.cols(), A.cols())
+    EXPECT_EQ(C.cols(), A.cols())
         << "Result cols incorrect: " << test_description;
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
+    EXPECT_EQ(C.rows(), golden_result.rows())
         << "Row count mismatch with golden: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
+    EXPECT_EQ(C.cols(), golden_result.cols())
         << "Column count mismatch with golden: " << test_description;
 
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
+    Scalar l2_diff = calculate_l2_difference(C, golden_result);
     EXPECT_LE(l2_diff, tolerance)
         << "L2 difference exceeds tolerance: " << test_description;
 
     std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
+              << calculate_max_abs_difference(C, golden_result)
+              << "\nRMSE: " << calculate_rmse(C, golden_result)
               << "\nL2 difference: " << l2_diff << std::endl;
   }
 };
