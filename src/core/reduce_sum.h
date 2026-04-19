@@ -2,54 +2,68 @@
 #define REDUCE_SUM_H
 
 #include <Eigen/Dense>
+#include <set>
 #include <stdexcept>
+#include <vector>
 
 /**
- * @brief Compute the sum over one axis of a 2-D matrix.
+ * @brief Sum-reduction over selected axes of a 2-D matrix.
  *
- * This is a simplified version of the ONNX `ReduceSum` operator limited to
- * two-dimensional tensors.  Only axes 0 or 1 are supported.  The resulting
- * matrix has one dimension equal to 1 and the other equal to the corresponding
- * dimension of the input.
+ * Simplified ONNX `ReduceSum` for two-dimensional `data`. Each axis must be
+ * 0 or 1. Duplicate entries in `axes` are ignored. The reduced tensor keeps
+ * degenerate dimensions of size 1 (same shape convention as the previous
+ * single-axis implementation).
  *
- * When `axis == 0` the output shape is (1 x cols) and each element is the sum
- * of the elements in the corresponding column of the input.  When `axis == 1`
- * the output shape is (rows x 1) and each element is the sum of the elements
- * in the corresponding row.
- *
- * @tparam Scalar Type of elements stored in the input matrix.
- * @param A Input matrix of size (rows x cols).
- * @param axis Reduction axis (0 or 1).  Defaults to 1.
- * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Resulting
- *         summed matrix.
- * @throws std::invalid_argument if an invalid axis is provided.
+ * @tparam Scalar Element type of `data` and `reduced`.
+ * @param data Input matrix (rows x cols).
+ * @param axes Non-empty list of axes to reduce (each 0 or 1 for 2-D data).
+ * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> `reduced`
+ *         tensor: axis 0 only -> (1 x cols); axis 1 only -> (rows x 1);
+ *         both axes -> (1 x 1) scalar block with the total sum.
+ * @throws std::invalid_argument if `axes` is empty or any axis is not 0 or 1.
  */
 
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduce_sum(
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
-    int axis = 1) {
-  const int rows = A.rows();
-  const int cols = A.cols();
-
-  if (axis == 0) {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(1, cols);
-    result.setZero();
-    for (int i = 0; i < rows; ++i) {
-      result += A.row(i);
-    }
-    return result;
-  } else if (axis == 1) {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(rows, 1);
-    result.setZero();
-    for (int i = 0; i < rows; ++i) {
-      // row(i) returns 1xcols; sum() collapses to scalar
-      result(i, 0) = A.row(i).sum();
-    }
-    return result;
-  } else {
-    throw std::invalid_argument("reduce_sum: axis must be 0 or 1");
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,
+    const std::vector<int>& axes) {
+  if (axes.empty()) {
+    throw std::invalid_argument("reduce_sum: axes must be non-empty");
   }
+
+  std::set<int> unique_axes;
+  for (int a : axes) {
+    if (a < 0 || a > 1) {
+      throw std::invalid_argument("reduce_sum: axis must be 0 or 1 for 2-D");
+    }
+    unique_axes.insert(a);
+  }
+
+  const int rows = data.rows();
+  const int cols = data.cols();
+
+  if (unique_axes.size() == 2) {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(1, 1);
+    reduced(0, 0) = data.sum();
+    return reduced;
+  }
+
+  if (*unique_axes.begin() == 0) {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(1, cols);
+    reduced.setZero();
+    for (int i = 0; i < rows; ++i) {
+      reduced += data.row(i);
+    }
+    return reduced;
+  }
+
+  // axis 1 only
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(rows, 1);
+  reduced.setZero();
+  for (int i = 0; i < rows; ++i) {
+    reduced(i, 0) = data.row(i).sum();
+  }
+  return reduced;
 }
 
 #endif  // REDUCE_SUM_H

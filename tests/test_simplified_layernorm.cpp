@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -13,8 +14,8 @@ class SimplifiedLayerNormTest : public GTestBase {
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_reference_sln(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& weight, Scalar epsilon) {
-    if (X.cols() != weight.size()) {
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& scale, Scalar epsilon) {
+    if (X.cols() != scale.size()) {
       throw std::invalid_argument("dimension mismatch");
     }
 
@@ -29,7 +30,7 @@ class SimplifiedLayerNormTest : public GTestBase {
       const Scalar rms = std::sqrt(mean_sq + epsilon);
 
       for (int j = 0; j < X.cols(); ++j) {
-        Y(i, j) = (X(i, j) / rms) * weight(j);
+        Y(i, j) = (X(i, j) / rms) * scale(j);
       }
     }
     return Y;
@@ -38,15 +39,15 @@ class SimplifiedLayerNormTest : public GTestBase {
   template <typename Scalar>
   void test_with_golden(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& weight, Scalar epsilon,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& scale, Scalar epsilon,
       Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
     ASSERT_NO_THROW(impl_result =
-                        simplified_layer_normalization(X, weight, epsilon))
+                        simplified_layer_normalization(X, scale, epsilon))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_sln(X, weight, epsilon))
+    ASSERT_NO_THROW(golden_result = golden_reference_sln(X, scale, epsilon))
         << "Golden reference failed: " << test_description;
 
     EXPECT_EQ(impl_result.rows(), golden_result.rows());
