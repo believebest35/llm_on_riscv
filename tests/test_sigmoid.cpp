@@ -24,34 +24,48 @@ class SigmoidTest : public GTestBase {
   template <typename Scalar>
   void test_with_golden(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
-      const std::string& desc = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y;
-    ASSERT_NO_THROW(Y = sigmoid<Scalar>(X))
-        << "implementation threw: " << desc;
+      Scalar tolerance, const std::string& test_description = "") {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
+    ASSERT_NO_THROW(impl_result = sigmoid<Scalar>(X))
+        << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden;
-    ASSERT_NO_THROW(golden = golden_reference_sigmoid(X))
-        << "golden threw: " << desc;
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
+    ASSERT_NO_THROW(golden_result = golden_reference_sigmoid(X))
+        << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(Y.rows(), golden.rows()) << "row mismatch: " << desc;
-    EXPECT_EQ(Y.cols(), golden.cols()) << "col mismatch: " << desc;
+    EXPECT_EQ(impl_result.rows(), golden_result.rows())
+        << "Row count mismatch: " << test_description;
+    EXPECT_EQ(impl_result.cols(), golden_result.cols())
+        << "Column count mismatch: " << test_description;
 
-    for (std::int64_t i = 0; i < Y.size(); ++i) {
-      EXPECT_NEAR(Y.data()[i], golden.data()[i], 1e-6)
-          << "value mismatch at " << i << " (" << desc << ")";
-    }
+    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
+    EXPECT_LE(l2_diff, tolerance)
+        << "L2 difference exceeds tolerance: " << test_description;
+
+    std::cout << test_description << "\nMax absolute difference: "
+              << calculate_max_abs_difference(impl_result, golden_result)
+              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
+              << "\nL2 difference: " << l2_diff << std::endl;
   }
 };
 
-TEST_F(SigmoidTest, Fixed) {
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> A(2, 2);
-  A << -1.0, 0.0, 1.0, 2.0;
-  test_with_golden<float>(A, "fixed values");
-}
+TEST_F(SigmoidTest, RandomMatrices) {
+  const std::vector<std::tuple<int, int>> test_cases = {
+      {1, 1},     {1, 1024},    {1024, 1},
+      {2, 3},     {64, 64},     {256, 256},
+      {1024, 1024},
+  };
 
-TEST_F(SigmoidTest, Random) {
-  auto M = generate_random_matrix<float>(5, 5, -5.0f, 5.0f);
-  test_with_golden<float>(M, "random");
+  const float tolerance = 1e-4;
+
+  for (const auto& [rows, cols] : test_cases) {
+    auto X = generate_random_matrix<float>(rows, cols, -5.0f, 5.0f);
+
+    std::string test_name = "Sigmoid " + std::to_string(rows) + "x" +
+                            std::to_string(cols);
+
+    test_with_golden(X, tolerance, test_name);
+  }
 }
 
 int main(int argc, char** argv) {

@@ -9,7 +9,7 @@ class MulTest : public GTestBase {
  protected:
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
-  golden_reference_elementwise_mul(
+  golden_reference_mul(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
     const int m = A.rows();
@@ -40,7 +40,7 @@ class MulTest : public GTestBase {
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_elementwise_mul(A, B))
+    ASSERT_NO_THROW(golden_result = golden_reference_mul(A, B))
         << "Golden reference failed: " << test_description;
 
     EXPECT_EQ(C.rows(), A.rows())

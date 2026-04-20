@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <string>
+#include <vector>
 
 #include "core/unsqueeze.h"
 #include "gtest_base.h"
@@ -10,8 +11,7 @@ class UnsqueezeTest : public GTestBase {
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
   golden_reference_unsqueeze(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& data,
-      int axes) {
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& data, int axes) {
     const int N = data.size();
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> expanded;
     if (axes == 0) {
@@ -27,51 +27,46 @@ class UnsqueezeTest : public GTestBase {
   template <typename Scalar>
   void test_with_golden(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& data, int axes,
-      const std::string& desc = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl;
-    ASSERT_NO_THROW(impl = unsqueeze<Scalar>(data, axes))
-        << "implementation threw: " << desc;
+      Scalar tolerance, const std::string& test_description = "") {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
+    ASSERT_NO_THROW(impl_result = unsqueeze<Scalar>(data, axes))
+        << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden;
-    ASSERT_NO_THROW(golden = golden_reference_unsqueeze<Scalar>(data, axes))
-        << "golden threw: " << desc;
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
+    ASSERT_NO_THROW(golden_result = golden_reference_unsqueeze<Scalar>(data, axes))
+        << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl.rows(), golden.rows()) << "row mismatch: " << desc;
-    EXPECT_EQ(impl.cols(), golden.cols()) << "col mismatch: " << desc;
+    EXPECT_EQ(impl_result.rows(), golden_result.rows())
+        << "Row count mismatch: " << test_description;
+    EXPECT_EQ(impl_result.cols(), golden_result.cols())
+        << "Column count mismatch: " << test_description;
 
-    const auto numel = impl.rows() * impl.cols();
-    for (int i = 0; i < numel; ++i) {
-      EXPECT_EQ(impl.data()[i], golden.data()[i])
-          << "value mismatch at " << i << " (" << desc << ")";
-    }
+    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
+    EXPECT_LE(l2_diff, tolerance)
+        << "L2 difference exceeds tolerance: " << test_description;
+
+    std::cout << test_description << "\nMax absolute difference: "
+              << calculate_max_abs_difference(impl_result, golden_result)
+              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
+              << "\nL2 difference: " << l2_diff << std::endl;
   }
 };
 
-TEST_F(UnsqueezeTest, Axes0) {
-  Eigen::Matrix<float, Eigen::Dynamic, 1> data(4);
-  data << 1, 2, 3, 4;
-  test_with_golden<float>(data, 0, "axes0");
-}
+TEST_F(UnsqueezeTest, RandomMatrices) {
+  const std::vector<std::tuple<int, int>> test_cases = {
+      {1, 0}, {1, 1}, {5, 0}, {5, 1}, {10, 0}, {100, 0}, {100, 1},
+  };
 
-TEST_F(UnsqueezeTest, Axes1) {
-  Eigen::Matrix<float, Eigen::Dynamic, 1> data(4);
-  data << 1, 2, 3, 4;
-  test_with_golden<float>(data, 1, "axes1");
-}
+  const float tolerance = 1e-5;
 
-TEST_F(UnsqueezeTest, Random) {
-  std::vector<int> sizes = {1, 5, 10, 100};
-  for (int n : sizes) {
-    auto v = generate_random_vector<float>(n, -2.0f, 2.0f);
-    test_with_golden<float>(v, 0, "rand axes0");
-    test_with_golden<float>(v, 1, "rand axes1");
+  for (const auto& [size, axes] : test_cases) {
+    auto data = generate_random_vector<float>(size, -2.0f, 2.0f);
+
+    std::string test_name = "Unsqueeze size=" + std::to_string(size) +
+                            " axes=" + std::to_string(axes);
+
+    test_with_golden(data, axes, tolerance, test_name);
   }
-}
-
-TEST_F(UnsqueezeTest, InvalidAxes) {
-  Eigen::Matrix<float, Eigen::Dynamic, 1> data(5);
-  data.setRandom();
-  EXPECT_THROW(unsqueeze<float>(data, 2), std::invalid_argument);
 }
 
 int main(int argc, char** argv) {

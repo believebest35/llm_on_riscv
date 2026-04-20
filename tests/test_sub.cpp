@@ -9,7 +9,7 @@ class SubTest : public GTestBase {
  protected:
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
-  golden_reference_subtract(
+  golden_reference_sub(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
     const int m = A.rows();
@@ -36,7 +36,7 @@ class SubTest : public GTestBase {
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_subtract(A, B))
+    ASSERT_NO_THROW(golden_result = golden_reference_sub(A, B))
         << "Golden reference failed: " << test_description;
 
     EXPECT_EQ(C.rows(), A.rows())

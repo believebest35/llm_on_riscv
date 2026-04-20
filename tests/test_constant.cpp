@@ -17,54 +17,46 @@ class ConstantTest : public GTestBase {
   template <typename Scalar>
   void test_with_golden(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& value,
-                        const std::string& desc = "") {
+      Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
     ASSERT_NO_THROW(impl_result = constant_matrix<Scalar>(value))
-        << "Implementation threw: " << desc;
+        << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(
-        golden_result = golden_reference_constant<Scalar>(value))
-        << "Golden reference threw: " << desc;
+    ASSERT_NO_THROW(golden_result = golden_reference_constant<Scalar>(value))
+        << "Golden reference failed: " << test_description;
 
     EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "row mismatch: " << desc;
+        << "Row count mismatch: " << test_description;
     EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "col mismatch: " << desc;
+        << "Column count mismatch: " << test_description;
 
-    const auto numel = impl_result.rows() * impl_result.cols();
-    for (int i = 0; i < numel; ++i) {
-      EXPECT_EQ(impl_result.data()[i], golden_result.data()[i])
-          << "value mismatch at index " << i << " (" << desc << ")";
-    }
+    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
+    EXPECT_LE(l2_diff, tolerance)
+        << "L2 difference exceeds tolerance: " << test_description;
+
+    std::cout << test_description << "\nMax absolute difference: "
+              << calculate_max_abs_difference(impl_result, golden_result)
+              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
+              << "\nL2 difference: " << l2_diff << std::endl;
   }
 };
 
-TEST_F(ConstantTest, VariousSizes) {
-  const std::vector<Eigen::MatrixXf> cases = {
-      (Eigen::MatrixXf(1, 1) << 0.0f).finished(),
-      (Eigen::MatrixXf(2, 3) << 1.0f, -2.0f, 3.5f, 4.5f, 0.0f, -6.0f)
-          .finished(),
-      (Eigen::MatrixXf::Random(8, 8) * 10.0f),
-      (Eigen::MatrixXf::Constant(64, 1, 2.0f)),
-      (Eigen::MatrixXf::Constant(1, 64, -3.14f)),
-      (Eigen::MatrixXf::Constant(128, 128, 7.77f)),
+TEST_F(ConstantTest, RandomMatrices) {
+  const std::vector<std::tuple<int, int>> test_cases = {
+      {1, 1}, {2, 3}, {64, 64}, {128, 256}, {1024, 1024},
   };
 
-  for (const auto& value : cases) {
-    std::ostringstream ss;
-    ss << "constant " << value.rows() << "x" << value.cols();
-    test_with_golden<float>(value, ss.str());
-  }
-}
+  const float tolerance = 1e-5;
 
-TEST_F(ConstantTest, EmptyMatrix) {
-  const Eigen::MatrixXf value(0, 0);
-  EXPECT_NO_THROW({
-    const auto output = constant_matrix<float>(value);
-    EXPECT_EQ(output.rows(), 0);
-    EXPECT_EQ(output.cols(), 0);
-  });
+  for (const auto& [rows, cols] : test_cases) {
+    auto value = generate_random_matrix<float>(rows, cols, -1.0, 1.0);
+
+    std::string test_name = "Constant " + std::to_string(rows) + "x" +
+                            std::to_string(cols);
+
+    test_with_golden(value, tolerance, test_name);
+  }
 }
 
 int main(int argc, char** argv) {

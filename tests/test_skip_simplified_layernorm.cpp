@@ -11,17 +11,11 @@
 class SkipSimplifiedLayerNormTest : public GTestBase {
  protected:
   template <typename Scalar>
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_reference(
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
+  golden_reference_skip_simplified_layernorm(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& skip,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& gamma, Scalar epsilon) {
-    if (X.rows() != skip.rows() || X.cols() != skip.cols()) {
-      throw std::invalid_argument("dimension mismatch");
-    }
-    if (X.cols() != gamma.size()) {
-      throw std::invalid_argument("dimension mismatch");
-    }
-
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y(X.rows(), X.cols());
     for (int i = 0; i < X.rows(); ++i) {
       Scalar sum_sq = static_cast<Scalar>(0);
@@ -51,18 +45,26 @@ class SkipSimplifiedLayerNormTest : public GTestBase {
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference(X, skip, gamma, epsilon))
+    ASSERT_NO_THROW(golden_result = golden_reference_skip_simplified_layernorm(X, skip, gamma, epsilon))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows());
-    EXPECT_EQ(impl_result.cols(), golden_result.cols());
+    EXPECT_EQ(impl_result.rows(), golden_result.rows())
+        << "Row count mismatch: " << test_description;
+    EXPECT_EQ(impl_result.cols(), golden_result.cols())
+        << "Column count mismatch: " << test_description;
 
     Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance) << "L2 diff too large: " << test_description;
+    EXPECT_LE(l2_diff, tolerance)
+        << "L2 difference exceeds tolerance: " << test_description;
+
+    std::cout << test_description << "\nMax absolute difference: "
+              << calculate_max_abs_difference(impl_result, golden_result)
+              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
+              << "\nL2 difference: " << l2_diff << std::endl;
   }
 };
 
-TEST_F(SkipSimplifiedLayerNormTest, RandomMatricesMatchGolden) {
+TEST_F(SkipSimplifiedLayerNormTest, RandomMatrices) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {1, 1}, {2, 3}, {4, 8}, {64, 128}, {128, 256}, {256, 512}, {1024, 128},
   };
@@ -76,7 +78,8 @@ TEST_F(SkipSimplifiedLayerNormTest, RandomMatricesMatchGolden) {
     auto gamma = generate_random_vector<float>(cols, 0.5f, 1.5f);
 
     std::string test_name =
-        "Shape " + std::to_string(rows) + "x" + std::to_string(cols);
+        "SkipSimplifiedLayerNorm " + std::to_string(rows) + "x" +
+        std::to_string(cols);
 
     test_with_golden(X, skip, gamma, epsilon, tolerance, test_name);
   }

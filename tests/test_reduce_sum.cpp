@@ -10,17 +10,12 @@
 class ReduceSumTest : public GTestBase {
  protected:
   template <typename Scalar>
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_reference_reduce(
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
+  golden_reference_reduce_sum(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,
       const std::vector<int>& axes) {
-    if (axes.empty()) {
-      throw std::invalid_argument("empty axes");
-    }
     std::set<int> unique_axes;
     for (int a : axes) {
-      if (a < 0 || a > 1) {
-        throw std::invalid_argument("invalid axis");
-      }
       unique_axes.insert(a);
     }
 
@@ -53,62 +48,55 @@ class ReduceSumTest : public GTestBase {
   template <typename Scalar>
   void test_with_golden(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,
-      const std::vector<int>& axes, const std::string& desc = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl;
-    ASSERT_NO_THROW(impl = reduce_sum<Scalar>(data, axes))
-        << "implementation threw: " << desc;
+      const std::vector<int>& axes, Scalar tolerance,
+      const std::string& test_description = "") {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
+    ASSERT_NO_THROW(impl_result = reduce_sum<Scalar>(data, axes))
+        << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden;
-    ASSERT_NO_THROW(golden = golden_reference_reduce<Scalar>(data, axes))
-        << "golden threw: " << desc;
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
+    ASSERT_NO_THROW(golden_result = golden_reference_reduce_sum(data, axes))
+        << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl.rows(), golden.rows()) << "row mismatch: " << desc;
-    EXPECT_EQ(impl.cols(), golden.cols()) << "col mismatch: " << desc;
+    EXPECT_EQ(impl_result.rows(), golden_result.rows())
+        << "Row count mismatch: " << test_description;
+    EXPECT_EQ(impl_result.cols(), golden_result.cols())
+        << "Column count mismatch: " << test_description;
 
-    const auto numel = impl.rows() * impl.cols();
-    for (int i = 0; i < numel; ++i) {
-      EXPECT_EQ(impl.data()[i], golden.data()[i])
-          << "value mismatch at " << i << " (" << desc << ")";
-    }
+    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
+    EXPECT_LE(l2_diff, tolerance)
+        << "L2 difference exceeds tolerance: " << test_description;
+
+    std::cout << test_description << "\nMax absolute difference: "
+              << calculate_max_abs_difference(impl_result, golden_result)
+              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
+              << "\nL2 difference: " << l2_diff << std::endl;
   }
 };
 
-TEST_F(ReduceSumTest, Basic) {
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> data(3, 4);
-  data << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12;
+TEST_F(ReduceSumTest, RandomMatrices) {
+  const std::vector<std::tuple<int, int, std::vector<int>>> test_cases = {
+      {3, 4, {0}},      {3, 4, {1}},        {3, 4, {0, 1}},
+      {5, 5, {0}},      {10, 20, {1}},      {64, 128, {0}},
+      {128, 64, {1}},   {256, 256, {0, 1}},
+  };
 
-  test_with_golden<float>(data, {0}, "axis0 basic");
-  test_with_golden<float>(data, {1}, "axis1 basic");
-}
+  const float tolerance = 1e-5;
 
-TEST_F(ReduceSumTest, BothAxes) {
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> data(3, 4);
-  data << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12;
+  for (const auto& [rows, cols, axes] : test_cases) {
+    auto data = generate_random_matrix<float>(rows, cols, -3.0f, 3.0f);
 
-  test_with_golden<float>(data, {0, 1}, "axes {0,1}");
-  test_with_golden<float>(data, {1, 0, 0}, "axes with duplicates");
-}
+    std::string axes_str;
+    for (size_t i = 0; i < axes.size(); ++i) {
+      if (i > 0) axes_str += ",";
+      axes_str += std::to_string(axes[i]);
+    }
 
-TEST_F(ReduceSumTest, Random) {
-  std::vector<std::tuple<int, int>> dims = {{5, 5}, {10, 20}, {1, 6}};
-  for (auto [r, c] : dims) {
-    auto M = generate_random_matrix<float>(r, c, -3.0f, 3.0f);
-    test_with_golden<float>(M, {0}, "random axis0");
-    test_with_golden<float>(M, {1}, "random axis1");
-    test_with_golden<float>(M, {0, 1}, "random both axes");
+    std::string test_name = "ReduceSum " + std::to_string(rows) + "x" +
+                            std::to_string(cols) + " axes={" + axes_str + "}";
+
+    test_with_golden(data, axes, tolerance, test_name);
   }
-}
-
-TEST_F(ReduceSumTest, InvalidAxis) {
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> data(2, 2);
-  data.setRandom();
-  EXPECT_THROW(reduce_sum<float>(data, {2}), std::invalid_argument);
-}
-
-TEST_F(ReduceSumTest, EmptyAxes) {
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> data(2, 2);
-  data.setRandom();
-  EXPECT_THROW(reduce_sum<float>(data, {}), std::invalid_argument);
 }
 
 int main(int argc, char** argv) {

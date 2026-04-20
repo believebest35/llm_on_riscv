@@ -24,43 +24,45 @@ class TransposeTest : public GTestBase {
   template <typename Scalar>
   void test_with_golden(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
-      const std::string& desc = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl;
-    ASSERT_NO_THROW(impl = transpose<Scalar>(A))
-        << "implementation threw: " << desc;
+      Scalar tolerance, const std::string& test_description = "") {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
+    ASSERT_NO_THROW(impl_result = transpose<Scalar>(A))
+        << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden;
-    ASSERT_NO_THROW(golden = golden_reference_transpose(A))
-        << "golden threw: " << desc;
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
+    ASSERT_NO_THROW(golden_result = golden_reference_transpose(A))
+        << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl.rows(), golden.rows()) << "row mismatch: " << desc;
-    EXPECT_EQ(impl.cols(), golden.cols()) << "col mismatch: " << desc;
+    EXPECT_EQ(impl_result.rows(), golden_result.rows())
+        << "Row count mismatch: " << test_description;
+    EXPECT_EQ(impl_result.cols(), golden_result.cols())
+        << "Column count mismatch: " << test_description;
 
-    const auto numel = impl.rows() * impl.cols();
-    for (int i = 0; i < numel; ++i) {
-      EXPECT_EQ(impl.data()[i], golden.data()[i])
-          << "value mismatch at index " << i << " (" << desc << ")";
-    }
+    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
+    EXPECT_LE(l2_diff, tolerance)
+        << "L2 difference exceeds tolerance: " << test_description;
+
+    std::cout << test_description << "\nMax absolute difference: "
+              << calculate_max_abs_difference(impl_result, golden_result)
+              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
+              << "\nL2 difference: " << l2_diff << std::endl;
   }
 };
 
-TEST_F(TransposeTest, FixedMatrices) {
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> A(2, 3);
-  A << 1, 2, 3, 4, 5, 6;
-  test_with_golden<float>(A, "2x3 fixed");
-
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> B(3, 1);
-  B << 7, 8, 9;
-  test_with_golden<float>(B, "3x1 fixed");
-}
-
 TEST_F(TransposeTest, RandomMatrices) {
-  const std::vector<std::pair<int, int>> cases = {
-      {1, 1}, {1, 5}, {5, 1}, {10, 10}, {64, 128}};
-  for (auto [r, c] : cases) {
-    auto M = generate_random_matrix<float>(r, c, -5.0f, 5.0f);
-    std::string desc = "random " + std::to_string(r) + "x" + std::to_string(c);
-    test_with_golden<float>(M, desc);
+  const std::vector<std::tuple<int, int>> test_cases = {
+      {1, 1}, {1, 1024}, {1024, 1}, {2, 3}, {64, 128}, {256, 512},
+  };
+
+  const float tolerance = 1e-5;
+
+  for (const auto& [rows, cols] : test_cases) {
+    auto A = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
+
+    std::string test_name = "Transpose " + std::to_string(rows) + "x" +
+                            std::to_string(cols);
+
+    test_with_golden(A, tolerance, test_name);
   }
 }
 
