@@ -33,25 +33,15 @@ class TransposeTest : public GTestBase {
     ASSERT_NO_THROW(golden_result = golden_reference_transpose(A))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(TransposeTest, RandomMatrices) {
+TEST_F(TransposeTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {1, 1}, {1, 1024}, {1024, 1}, {2, 3}, {64, 128}, {256, 512},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {151936, 1024},
   };
 
   const float tolerance = 1e-5;
@@ -66,8 +56,3 @@ TEST_F(TransposeTest, RandomMatrices) {
   }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
-}

@@ -2,7 +2,6 @@
 #define SHAPE_H
 
 #include <Eigen/Dense>
-#include <stdexcept>
 
 /**
  * @brief Compute the shape of a matrix and return it as a small vector.

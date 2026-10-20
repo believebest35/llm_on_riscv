@@ -36,23 +36,11 @@ class UnsqueezeTest : public GTestBase {
     ASSERT_NO_THROW(golden_result = golden_reference_unsqueeze<Scalar>(data, axes))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(UnsqueezeTest, RandomMatrices) {
+TEST_F(UnsqueezeTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {1, 0}, {1, 1}, {5, 0}, {5, 1}, {10, 0}, {100, 0}, {100, 1},
   };
@@ -69,8 +57,8 @@ TEST_F(UnsqueezeTest, RandomMatrices) {
   }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
+
+TEST_F(UnsqueezeTest, InvalidInputs) {
+  auto data = generate_random_vector<float>(4);
+  EXPECT_THROW(unsqueeze<float>(data, 2), std::invalid_argument);
 }

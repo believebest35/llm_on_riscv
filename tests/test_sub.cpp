@@ -39,27 +39,11 @@ class SubTest : public GTestBase {
     ASSERT_NO_THROW(golden_result = golden_reference_sub(A, B))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(C.rows(), A.rows())
-        << "Result rows incorrect: " << test_description;
-    EXPECT_EQ(C.cols(), A.cols())
-        << "Result cols incorrect: " << test_description;
-    EXPECT_EQ(C.rows(), golden_result.rows())
-        << "Row count mismatch with golden: " << test_description;
-    EXPECT_EQ(C.cols(), golden_result.cols())
-        << "Column count mismatch with golden: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(C, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(C, golden_result)
-              << "\nRMSE: " << calculate_rmse(C, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(C, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(SubTest, RandomMatrices) {
+TEST_F(SubTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {1, 1},     {1, 1024},    {1024, 1},    {2, 3},       {64, 64},
       {256, 256}, {1024, 1024}, {1024, 2048}, {1024, 3072}, {2048, 1024},
@@ -78,8 +62,9 @@ TEST_F(SubTest, RandomMatrices) {
   }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
+
+TEST_F(SubTest, InvalidInputs) {
+  auto A = generate_random_matrix<float>(2, 3);
+  auto B = generate_random_matrix<float>(3, 2);
+  EXPECT_THROW(matrix_subtract_elementwise(A, B), std::invalid_argument);
 }

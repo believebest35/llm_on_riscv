@@ -5,21 +5,15 @@
 #include <stdexcept>
 
 /**
- * @brief "Unsqueeze" a 1-D vector by inserting a new dimension of size 1.
- *
- * Input data is a 1-D vector of size N.
- * unsqueeze inserts a new dimension of size 1 at the specified axes,
- * producing a 2-D output without changing data order.
- *
- * axes == 0: N-element vector → 1 x N row vector
- * axes == 1: N-element vector → N x 1 column vector
+ * @brief "Unsqueeze" a 1-D vector by inserting a new dimension of size 1
+ * (ONNX `Unsqueeze`).
  *
  * @tparam Scalar Element type.
  * @param data Input 1-D vector of size N.
- * @param axes Axis at which to insert the new dimension: 0 or 1.
+ * @param axes Axis at which to insert the new dimension: 0 gives a 1 x N row
+ *        vector, 1 gives an N x 1 column vector.
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Resulting
  *         2-D matrix (1xN or Nx1).
- * @throws std::invalid_argument if axes is not 0 or 1.
  */
 
 template <typename Scalar>
@@ -30,10 +24,6 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> unsqueeze(
   }
 
   const int N = data.size();
-  if (N == 0) {
-    throw std::invalid_argument("unsqueeze: input vector cannot be empty");
-  }
-
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> expanded;
   if (axes == 0) {
     expanded.resize(1, N);

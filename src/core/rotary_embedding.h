@@ -6,9 +6,6 @@
 #include <stdexcept>
 #include <string>
 
-/** Maximum supported RoPE table length (cache rows). */
-inline constexpr int kRotaryEmbeddingMaxSeqLen = 40960;
-
 /**
  * Llama-style rotate_half on the last dimension: x = [x1, x2] -> [-x2, x1].
  * head_dim must be even.
@@ -18,9 +15,6 @@ void rotary_rotate_half_row(
     const Eigen::Ref<const Eigen::Matrix<Scalar, 1, Eigen::Dynamic>>& x,
     Eigen::Ref<Eigen::Matrix<Scalar, 1, Eigen::Dynamic>> out) {
   const Eigen::Index d = x.size();
-  if (d % 2 != 0) {
-    throw std::invalid_argument("rotary_rotate_half_row: head_dim must be even");
-  }
   const Eigen::Index h = d / 2;
   out.head(h) = -x.tail(h);
   out.tail(h) = x.head(h);
@@ -36,8 +30,7 @@ void rotary_rotate_half_row(
  *   sequence_length), i.e. 0..L-1 repeated per batch (all sequences start at 0).
  *   For decode / arbitrary absolute positions, pass one id per row.
  * - cos_cache, sin_cache: (max_positions, head_dim/2), use rows indexed by
- *   position (only the prefix of length max used position+1 is needed; max row
- *   index must stay < cache.rows() and <= kRotaryEmbeddingMaxSeqLen).
+ *   position (max row index must stay < cache.rows()).
  * - num_heads: hidden_dim must be divisible; head_dim = hidden_dim / num_heads.
  *
  * Same formula as common HF Llama: cos/sin for head are each length head_dim/2,
@@ -65,11 +58,6 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> rotary_embedding(
   }
   const Eigen::Index rope_dim = head_dim / 2;
 
-  if (cos_cache.rows() > kRotaryEmbeddingMaxSeqLen ||
-      sin_cache.rows() > kRotaryEmbeddingMaxSeqLen) {
-    throw std::invalid_argument(
-        "rotary_embedding: cos/sin cache rows exceed kRotaryEmbeddingMaxSeqLen");
-  }
   if (cos_cache.cols() != rope_dim || sin_cache.cols() != rope_dim) {
     throw std::invalid_argument(
         "rotary_embedding: cache last dim must equal head_dim/2");

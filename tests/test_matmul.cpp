@@ -48,30 +48,17 @@ class MatMulTest : public GTestBase {
     ASSERT_NO_THROW(golden_result = golden_reference_matmul(A, B))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), A.rows())
-        << "Result rows incorrect: " << test_description;
-    EXPECT_EQ(impl_result.cols(), B.cols())
-        << "Result cols incorrect: " << test_description;
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch with golden: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch with golden: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(MatMulTest, RandomMatrices) {
+TEST_F(MatMulTest, ValidInputs) {
   const std::vector<std::tuple<int, int, int>> test_cases = {
       {1, 1, 1},    {1, 1024, 1},    {1024, 1, 2048},    {2, 3, 4},
       {64, 64, 64}, {256, 256, 256}, {1024, 1024, 2048},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {4, 1024, 2048},   {4, 1024, 1024},  {4, 2048, 1024},
+      {4, 1024, 3072},   {4, 3072, 1024},  {4, 1024, 151936},
   };
 
   const float tolerance = 1e-2;
@@ -88,8 +75,8 @@ TEST_F(MatMulTest, RandomMatrices) {
   }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
+TEST_F(MatMulTest, InvalidInputs) {
+  auto A = generate_random_matrix<float>(2, 3);
+  auto B = generate_random_matrix<float>(4, 5);
+  EXPECT_THROW(matrix_multiply(A, B), std::invalid_argument);
 }

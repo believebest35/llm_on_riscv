@@ -58,27 +58,17 @@ class ReduceSumTest : public GTestBase {
     ASSERT_NO_THROW(golden_result = golden_reference_reduce_sum(data, axes))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(ReduceSumTest, RandomMatrices) {
+TEST_F(ReduceSumTest, ValidInputs) {
   const std::vector<std::tuple<int, int, std::vector<int>>> test_cases = {
       {3, 4, {0}},      {3, 4, {1}},        {3, 4, {0, 1}},
       {5, 5, {0}},      {10, 20, {1}},      {64, 128, {0}},
       {128, 64, {1}},   {256, 256, {0, 1}},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {1, 7, {1}},
   };
 
   const float tolerance = 1e-5;
@@ -99,8 +89,10 @@ TEST_F(ReduceSumTest, RandomMatrices) {
   }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
+
+TEST_F(ReduceSumTest, InvalidInputs) {
+  auto data = generate_random_matrix<float>(2, 3);
+  EXPECT_THROW(reduce_sum<float>(data, std::vector<int>{}),
+               std::invalid_argument);
+  EXPECT_THROW(reduce_sum<float>(data, {2}), std::invalid_argument);
 }

@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <iostream>
 #include <string>
 
 class GTestBase : public ::testing::Test {
@@ -86,6 +87,28 @@ class GTestBase : public ::testing::Test {
     }
 
     return std::sqrt(sum_squared_error / total_elements);
+  }
+
+  // Assert that `actual` matches `expected` in shape and is numerically close,
+  // then print the standard difference metrics for the case.
+  template <typename Scalar>
+  void expect_matrix_near(
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& actual,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& expected,
+      double tolerance, const std::string& description = "") {
+    EXPECT_EQ(actual.rows(), expected.rows())
+        << "Row count mismatch: " << description;
+    EXPECT_EQ(actual.cols(), expected.cols())
+        << "Column count mismatch: " << description;
+
+    const Scalar l2_diff = calculate_l2_difference(actual, expected);
+    EXPECT_LE(l2_diff, tolerance)
+        << "L2 difference exceeds tolerance: " << description;
+
+    std::cout << description << "\nMax absolute difference: "
+              << calculate_max_abs_difference(actual, expected)
+              << "\nRMSE: " << calculate_rmse(actual, expected)
+              << "\nL2 difference: " << l2_diff << std::endl;
   }
 };
 

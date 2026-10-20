@@ -2,7 +2,6 @@
 #define CAST_H
 
 #include <Eigen/Dense>
-#include <stdexcept>
 
 /**
  * @brief Cast matrix elements from one scalar type to another.

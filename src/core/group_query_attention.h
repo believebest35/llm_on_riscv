@@ -40,9 +40,6 @@ group_query_attention(
   constexpr int kNumKeyValueHeads = 8;
   constexpr int kHeadDim = 128;
 
-  if (query.rows() <= 0) {
-    throw std::invalid_argument("query sequence length must be positive");
-  }
   if (query.rows() != key.rows() || query.rows() != value.rows()) {
     throw std::invalid_argument("query/key/value must share sequence length");
   }
@@ -69,9 +66,6 @@ group_query_attention(
   if (total_sequence_length != past_sequence + sequence) {
     throw std::invalid_argument(
         "total_sequence_length must equal past_sequence_length + sequence_length");
-  }
-  if (total_sequence_length <= 0) {
-    throw std::invalid_argument("total_sequence_length must be positive");
   }
   if (seqlens_k <= 0 || seqlens_k > total_sequence_length) {
     throw std::invalid_argument("seqlens_k value out of valid range");
@@ -107,11 +101,6 @@ group_query_attention(
       valid_mask(qs, ks) = (ks <= causal_limit) && (ks < seqlens_k);
     }
   }
-  const Eigen::VectorXi valid_counts =
-      valid_mask.cast<int>().matrix().rowwise().sum();
-  if ((valid_counts.array() == 0).any()) {
-    throw std::invalid_argument("no valid key positions after applying masks");
-  }
 
   for (int qh = 0; qh < kNumQueryHeads; ++qh) {
     const int kvh = qh / 2;
@@ -133,9 +122,6 @@ group_query_attention(
       Eigen::Array<Scalar, 1, Eigen::Dynamic> row_exp =
           (scores.row(qs).array() - max_score).exp();
       const Scalar exp_sum = row_exp.sum();
-      if (exp_sum == static_cast<Scalar>(0)) {
-        throw std::invalid_argument("softmax normalization sum became zero");
-      }
       probs.row(qs) = (row_exp / exp_sum).matrix();
     }
 

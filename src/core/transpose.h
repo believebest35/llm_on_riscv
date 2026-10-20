@@ -19,7 +19,6 @@
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> transpose(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A) {
-  // Eigen's transpose returns an expression; eval() yields an owned matrix.
   return A.transpose();
 }
 

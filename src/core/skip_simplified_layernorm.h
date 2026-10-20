@@ -36,9 +36,6 @@ skip_simplified_layer_normalization(
         std::to_string(X.cols()) +
         ", gamma.size() = " + std::to_string(gamma.size()));
   }
-  if (epsilon <= static_cast<Scalar>(0)) {
-    throw std::invalid_argument("epsilon must be > 0");
-  }
 
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y(X.rows(), X.cols());
 

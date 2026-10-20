@@ -38,26 +38,16 @@ class ConcatTest : public GTestBase {
     ASSERT_NO_THROW(golden_result = golden_reference_concat<Scalar>(A, B, axis))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(ConcatTest, RandomMatrices) {
+TEST_F(ConcatTest, ValidInputs) {
   const std::vector<std::tuple<int, int, int, int, int>> test_cases = {
       {2, 3, 1, 3, 0}, {2, 2, 2, 1, 1}, {3, 4, 2, 4, 0},
       {5, 2, 5, 3, 1}, {64, 128, 32, 128, 0}, {128, 64, 128, 64, 1},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {1, 1, 1, 1, 0},
   };
 
   const float tolerance = 1e-5;
@@ -75,8 +65,16 @@ TEST_F(ConcatTest, RandomMatrices) {
   }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
+
+TEST_F(ConcatTest, InvalidInputs) {
+  auto A = generate_random_matrix<float>(2, 3);
+  auto B = generate_random_matrix<float>(2, 3);
+
+  EXPECT_THROW(concat<float>(A, B, 2), std::invalid_argument);
+  // axis 0 needs matching column counts.
+  EXPECT_THROW(concat<float>(A, generate_random_matrix<float>(2, 4), 0),
+               std::invalid_argument);
+  // axis 1 needs matching row counts.
+  EXPECT_THROW(concat<float>(A, generate_random_matrix<float>(3, 3), 1),
+               std::invalid_argument);
 }

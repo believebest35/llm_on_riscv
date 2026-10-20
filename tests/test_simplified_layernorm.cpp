@@ -46,26 +46,16 @@ class SimplifiedLayerNormTest : public GTestBase {
     ASSERT_NO_THROW(golden_result = golden_reference_simplified_layernorm(X, scale, epsilon))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(SimplifiedLayerNormTest, RandomMatrices) {
+TEST_F(SimplifiedLayerNormTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {1, 1},     {2, 3},      {4, 8},      {64, 128},
       {128, 256}, {256, 1024}, {1024, 128}, {1024, 3072},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {4, 1024}, {64, 128},
   };
 
   const float epsilon = 1e-5f;
@@ -83,8 +73,10 @@ TEST_F(SimplifiedLayerNormTest, RandomMatrices) {
   }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
+
+TEST_F(SimplifiedLayerNormTest, InvalidInputs) {
+  auto X = generate_random_matrix<float>(4, 8);
+  auto bad_scale = generate_random_vector<float>(7);
+  EXPECT_THROW(simplified_layer_normalization(X, bad_scale, 1e-5f),
+               std::invalid_argument);
 }

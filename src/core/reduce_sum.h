@@ -7,12 +7,7 @@
 #include <vector>
 
 /**
- * @brief Sum-reduction over selected axes of a 2-D matrix.
- *
- * Simplified ONNX `ReduceSum` for two-dimensional `data`. Each axis must be
- * 0 or 1. Duplicate entries in `axes` are ignored. The reduced tensor keeps
- * degenerate dimensions of size 1 (same shape convention as the previous
- * single-axis implementation).
+ * @brief Sum-reduction over selected axes of a 2-D matrix (ONNX `ReduceSum`).
  *
  * @tparam Scalar Element type of `data` and `reduced`.
  * @param data Input matrix (rows x cols).
@@ -20,7 +15,6 @@
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> `reduced`
  *         tensor: axis 0 only -> (1 x cols); axis 1 only -> (rows x 1);
  *         both axes -> (1 x 1) scalar block with the total sum.
- * @throws std::invalid_argument if `axes` is empty or any axis is not 0 or 1.
  */
 
 template <typename Scalar>

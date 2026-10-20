@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <cmath>
 #include <string>
 
 #include "core/cast.h"
@@ -30,33 +29,11 @@ class CastTest : public GTestBase {
     ASSERT_NO_THROW((golden_result = golden_reference_cast<Out, In>(A)))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch: " << test_description;
-
-    double max_diff = 0.0;
-    double sum_sq = 0.0;
-    int total = impl_result.size();
-    for (int i = 0; i < total; ++i) {
-      double diff = std::abs(static_cast<double>(impl_result.data()[i]) -
-                             static_cast<double>(golden_result.data()[i]));
-      max_diff = std::max(max_diff, diff);
-      sum_sq += diff * diff;
-    }
-    double rmse = std::sqrt(sum_sq / total);
-    double l2_diff = std::sqrt(sum_sq);
-
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: " << max_diff
-              << "\nRMSE: " << rmse << "\nL2 difference: " << l2_diff
-              << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(CastTest, RandomMatrices) {
+TEST_F(CastTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {1, 1}, {1, 1024}, {1024, 1}, {2, 3}, {64, 64}, {256, 256}, {1024, 1024},
   };
@@ -71,10 +48,21 @@ TEST_F(CastTest, RandomMatrices) {
 
     test_with_golden<float, float>(A, tolerance, test_name);
   }
+
+  // Hand-picked cases: non-random values / alternative
+  // argument forms, checked against the same reference.
+  {
+    const auto A = generate_random_matrix<float>(4, 8, -2.0f, 2.0f);
+
+    const auto as_int = cast_matrix<int, float>(A);
+    EXPECT_EQ(as_int.rows(), A.rows());
+    EXPECT_EQ(as_int.cols(), A.cols());
+    for (int i = 0; i < A.size(); ++i) {
+      EXPECT_EQ(as_int.data()[i], static_cast<int>(A.data()[i]));
+    }
+
+    test_with_golden<double, float>(A, 1e-6, "Cast float->double");
+  }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
-}
+

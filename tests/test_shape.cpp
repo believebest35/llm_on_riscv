@@ -10,9 +10,9 @@ class ShapeTest : public GTestBase {
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_reference_shape(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A) {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> out(1, 2);
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> out(2, 1);
     out(0, 0) = static_cast<Scalar>(A.rows());
-    out(0, 1) = static_cast<Scalar>(A.cols());
+    out(1, 0) = static_cast<Scalar>(A.cols());
     return out;
   }
 
@@ -24,33 +24,23 @@ class ShapeTest : public GTestBase {
     ASSERT_NO_THROW(impl_vec = shape<Scalar>(A))
         << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result(1, 2);
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result(2, 1);
     impl_result(0, 0) = impl_vec(0);
-    impl_result(0, 1) = impl_vec(1);
+    impl_result(1, 0) = impl_vec(1);
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
     ASSERT_NO_THROW(golden_result = golden_reference_shape(A))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(ShapeTest, RandomMatrices) {
+TEST_F(ShapeTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {1, 1}, {1, 1024}, {1024, 1}, {2, 3}, {64, 64}, {256, 256}, {1024, 2048},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {1, 4}, {1, 7},
   };
 
   const float tolerance = 1e-5;
@@ -65,8 +55,3 @@ TEST_F(ShapeTest, RandomMatrices) {
   }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
-}
