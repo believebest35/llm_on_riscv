@@ -11,26 +11,28 @@
 class SkipSimplifiedLayerNormTest : public GTestBase {
  protected:
   template <typename Scalar>
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
+  std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
+             Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>>
   golden_reference_skip_simplified_layernorm(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& skip,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& gamma, Scalar epsilon) {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y(X.rows(), X.cols());
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> sum(X.rows(), X.cols());
     for (int i = 0; i < X.rows(); ++i) {
       Scalar sum_sq = static_cast<Scalar>(0);
       for (int j = 0; j < X.cols(); ++j) {
-        const Scalar v = X(i, j) + skip(i, j);
-        sum_sq += v * v;
+        sum(i, j) = X(i, j) + skip(i, j);
+        sum_sq += sum(i, j) * sum(i, j);
       }
       const Scalar mean_sq = sum_sq / static_cast<Scalar>(X.cols());
       const Scalar rms = std::sqrt(mean_sq + epsilon);
 
       for (int j = 0; j < X.cols(); ++j) {
-        Y(i, j) = ((X(i, j) + skip(i, j)) / rms) * gamma(j);
+        Y(i, j) = (sum(i, j) / rms) * gamma(j);
       }
     }
-    return Y;
+    return {Y, sum};
   }
 
   template <typename Scalar>
@@ -40,15 +42,23 @@ class SkipSimplifiedLayerNormTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& gamma, Scalar epsilon,
       Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result = skip_simplified_layer_normalization(
-                        X, skip, gamma, epsilon))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_sum;
+    ASSERT_NO_THROW(std::tie(impl_result, impl_sum) =
+                        skip_simplified_layer_normalization(X, skip, gamma,
+                                                            epsilon))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_skip_simplified_layernorm(X, skip, gamma, epsilon))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_sum;
+    ASSERT_NO_THROW(std::tie(golden_result, golden_sum) =
+                        golden_reference_skip_simplified_layernorm(
+                            X, skip, gamma, epsilon))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_result, golden_result, tolerance,
+                       test_description + " [Y]");
+    expect_matrix_near(impl_sum, golden_sum, tolerance,
+                       test_description + " [input_skip_bias_sum]");
   }
 };
 

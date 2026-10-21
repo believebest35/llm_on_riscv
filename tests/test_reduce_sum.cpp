@@ -16,6 +16,9 @@ class ReduceSumTest : public GTestBase {
       const std::vector<int>& axes) {
     std::set<int> unique_axes;
     for (int a : axes) {
+      if (a < 0) {
+        a += 2;  // 2-D data: -1 -> 1, -2 -> 0
+      }
       unique_axes.insert(a);
     }
 
@@ -67,8 +70,10 @@ TEST_F(ReduceSumTest, ValidInputs) {
       {3, 4, {0}},      {3, 4, {1}},        {3, 4, {0, 1}},
       {5, 5, {0}},      {10, 20, {1}},      {64, 128, {0}},
       {128, 64, {1}},   {256, 256, {0, 1}},
+      // Negative axes are used by the Qwen3 graph.
+      {3, 4, {-1}},      {3, 4, {-2}},      {3, 4, {-1, -2}},
       // docs/01_dev.md (Qwen3-0.6B) shapes.
-      {1, 7, {1}},
+      {1, 7, {-1}},
   };
 
   const float tolerance = 1e-5;

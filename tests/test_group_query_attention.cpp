@@ -71,7 +71,7 @@ class GroupQueryAttentionTest : public GTestBase {
         Scalar max_score = -std::numeric_limits<Scalar>::infinity();
 
         for (int ks = 0; ks < total_sequence_length; ++ks) {
-          if (ks > causal_limit || ks >= seqlens_k) {
+          if (ks > causal_limit || ks > seqlens_k) {
             scores[ks] = -std::numeric_limits<Scalar>::infinity();
             continue;
           }
@@ -163,7 +163,7 @@ TEST_F(GroupQueryAttentionTest, ValidInputs) {
 
   for (const auto& [seq, past_seq] : test_cases) {
     const int total_seq = past_seq + seq;
-    const int seqlens_k = total_seq;
+    const int seqlens_k = total_seq - 1;
 
     auto query =
         generate_random_matrix<float>(seq, kQueryHidden, -0.5f, 0.5f);
@@ -186,7 +186,7 @@ TEST_F(GroupQueryAttentionTest, ValidInputs) {
   // Hand-picked cases: non-random values / alternative
   // argument forms, checked against the same reference.
   {
-    // past is non-empty but seqlens_k only exposes the last key position.
+    // past is non-empty and seqlens_k hides the newest key position.
     constexpr int kSeq = 2;
     constexpr int kPast = 1;
     constexpr int kTotal = kSeq + kPast;
@@ -199,8 +199,8 @@ TEST_F(GroupQueryAttentionTest, ValidInputs) {
     auto past_value =
         generate_random_matrix<float>(kNumKvHeads * kPast, kHeadDim, -0.5f, 0.5f);
 
-    test_with_golden(query, key, value, past_key, past_value, kPast + 1, kTotal,
-                     1e-3f, "GQA seqlens_k=2 of 3");
+    test_with_golden(query, key, value, past_key, past_value, kPast, kTotal,
+                     1e-3f, "GQA seqlens_k hides newest key");
   }
 }
 
@@ -220,11 +220,12 @@ TEST_F(GroupQueryAttentionTest, InvalidInputs) {
                                             empty_past, kSeq, kSeq),
                std::invalid_argument);
 
-  // seqlens_k must be within (0, total_sequence_length].
+  // seqlens_k is the last valid KV index, so it must be in
+  // [0, total_sequence_length).
   EXPECT_THROW(group_query_attention<float>(query, key, value, empty_past,
-                                            empty_past, 0, kSeq),
+                                            empty_past, -1, kSeq),
                std::invalid_argument);
   EXPECT_THROW(group_query_attention<float>(query, key, value, empty_past,
-                                            empty_past, kSeq + 1, kSeq),
+                                            empty_past, kSeq, kSeq),
                std::invalid_argument);
 }

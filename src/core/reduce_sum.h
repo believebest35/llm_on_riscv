@@ -27,8 +27,12 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduce_sum(
 
   std::set<int> unique_axes;
   for (int a : axes) {
+    if (a < 0) {
+      a += 2;  // 2-D data: -1 -> 1, -2 -> 0
+    }
     if (a < 0 || a > 1) {
-      throw std::invalid_argument("reduce_sum: axis must be 0 or 1 for 2-D");
+      throw std::invalid_argument(
+          "reduce_sum: axis must be in [-2, 1] for 2-D");
     }
     unique_axes.insert(a);
   }

@@ -29,7 +29,7 @@ class UnsqueezeTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& data, int axes,
       Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result = unsqueeze<Scalar>(data, axes))
+    ASSERT_NO_THROW(impl_result = unsqueeze(data, axes))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
@@ -55,10 +55,43 @@ TEST_F(UnsqueezeTest, ValidInputs) {
 
     test_with_golden(data, axes, tolerance, test_name);
   }
+
+  // Scalar (1x1) and 1-D tensors passed as 2-D matrices, as used by the
+  // Qwen3 shape-construction path.
+  {
+    Eigen::MatrixXf scalar(1, 1);
+    scalar << 7.0f;
+
+    Eigen::MatrixXf scalar_row;
+    ASSERT_NO_THROW(scalar_row = unsqueeze(scalar, 0));
+    EXPECT_EQ(scalar_row.rows(), 1);
+    EXPECT_EQ(scalar_row.cols(), 1);
+    EXPECT_FLOAT_EQ(scalar_row(0, 0), 7.0f);
+
+    Eigen::MatrixXf vector = generate_random_vector<float>(5, -1.0f, 1.0f);
+    Eigen::MatrixXf row;
+    ASSERT_NO_THROW(row = unsqueeze(vector, 0));
+    EXPECT_EQ(row.rows(), 1);
+    EXPECT_EQ(row.cols(), 5);
+    for (int i = 0; i < 5; ++i) {
+      EXPECT_FLOAT_EQ(row(0, i), vector(i, 0));
+    }
+
+    Eigen::MatrixXf col;
+    ASSERT_NO_THROW(col = unsqueeze(row, 1));
+    EXPECT_EQ(col.rows(), 5);
+    EXPECT_EQ(col.cols(), 1);
+    for (int i = 0; i < 5; ++i) {
+      EXPECT_FLOAT_EQ(col(i, 0), row(0, i));
+    }
+  }
 }
 
 
 TEST_F(UnsqueezeTest, InvalidInputs) {
   auto data = generate_random_vector<float>(4);
-  EXPECT_THROW(unsqueeze<float>(data, 2), std::invalid_argument);
+  EXPECT_THROW(unsqueeze(data, 2), std::invalid_argument);
+
+  auto matrix = generate_random_matrix<float>(2, 3);
+  EXPECT_THROW(unsqueeze(matrix, 0), std::invalid_argument);
 }

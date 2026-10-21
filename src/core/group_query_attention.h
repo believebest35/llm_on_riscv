@@ -17,7 +17,7 @@
  * - query:      (sequence, 2048) = (S, num_query_heads * head_dim)
  * - key/value:  (sequence, 1024) = (S, num_kv_heads * head_dim)
  * - past_key/v: (8 * past_sequence, 128)
- * - seqlens_k:  scalar, valid KV length after concat
+ * - seqlens_k:  scalar, last valid KV index (total_sequence_length - 1)
  * - total_sequence_length: scalar, must equal past_sequence + sequence
  *
  * Returns:
@@ -67,8 +67,8 @@ group_query_attention(
     throw std::invalid_argument(
         "total_sequence_length must equal past_sequence_length + sequence_length");
   }
-  if (seqlens_k <= 0 || seqlens_k > total_sequence_length) {
-    throw std::invalid_argument("seqlens_k value out of valid range");
+  if (seqlens_k < 0 || seqlens_k >= total_sequence_length) {
+    throw std::invalid_argument("seqlens_k must be a valid KV index");
   }
 
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_key(
@@ -98,7 +98,7 @@ group_query_attention(
   for (int qs = 0; qs < sequence; ++qs) {
     const int causal_limit = past_sequence + qs;
     for (int ks = 0; ks < total_sequence_length; ++ks) {
-      valid_mask(qs, ks) = (ks <= causal_limit) && (ks < seqlens_k);
+      valid_mask(qs, ks) = (ks <= causal_limit) && (ks <= seqlens_k);
     }
   }
 

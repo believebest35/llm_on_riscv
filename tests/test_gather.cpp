@@ -109,6 +109,17 @@ TEST_F(GatherTest, ValidInputs) {
     EXPECT_FLOAT_EQ(cols(0, 1), 6.0f);
     EXPECT_FLOAT_EQ(cols(1, 0), 1.0f);
     EXPECT_FLOAT_EQ(cols(1, 1), 4.0f);
+
+    // Gather a scalar from a shape vector: data (2,) and indices () in the
+    // Qwen3 graph, represented as 2x1 data and a 1x1 index here.
+    Eigen::MatrixXf shape_vec(2, 1);
+    shape_vec << 4.0f, 7.0f;
+    Eigen::MatrixXi scalar_idx(1, 1);
+    scalar_idx << 1;
+    auto scalar = gather<float, int>(shape_vec, scalar_idx, 0);
+    EXPECT_EQ(scalar.rows(), 1);
+    EXPECT_EQ(scalar.cols(), 1);
+    EXPECT_FLOAT_EQ(scalar(0, 0), 7.0f);
   }
 }
 

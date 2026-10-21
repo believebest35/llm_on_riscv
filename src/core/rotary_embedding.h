@@ -25,10 +25,12 @@ void rotary_rotate_half_row(
  *
  * Logical I/O (matching graph / ONNX-style RotaryEmbedding):
  * - input:  (batch * sequence_length, hidden_dim)
- * - position_ids: optional length-(batch*sequence_length) vector; if omitted or
- *   empty, positions are implicit for prefill: row r has position (r %
- *   sequence_length), i.e. 0..L-1 repeated per batch (all sequences start at 0).
- *   For decode / arbitrary absolute positions, pass one id per row.
+ * - position_ids: optional int64 vector. A length-1 vector is the starting
+ *   position for each sequence (row r gets position_ids[0] + r %
+ *   sequence_length), matching ORT's single-element position_ids input. A
+ *   length-(batch*sequence_length) vector gives one absolute position per row.
+ *   If omitted or empty, positions are implicit for prefill: row r has position
+ *   (r % sequence_length).
  * - cos_cache, sin_cache: (max_positions, head_dim/2), use rows indexed by
  *   position (max row index must stay < cache.rows()).
  * - num_heads: hidden_dim must be divisible; head_dim = hidden_dim / num_heads.
@@ -67,23 +69,21 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> rotary_embedding(
         "rotary_embedding: cos_cache and sin_cache row count must match");
   }
 
-  const bool use_explicit_positions =
-      position_ids.has_value() && position_ids->size() > 0;
-  if (use_explicit_positions) {
-    if (position_ids->size() != rows) {
-      throw std::invalid_argument(
-          "rotary_embedding: position_ids length must match input rows");
-    }
-  } else {
+  const Eigen::Index position_count =
+      position_ids.has_value() ? position_ids->size() : 0;
+  if (position_count != 0 && position_count != 1 && position_count != rows) {
+    throw std::invalid_argument(
+        "rotary_embedding: position_ids must contain 1 or input_rows values");
+  }
+  if (position_count != rows) {
     if (sequence_length <= 0) {
       throw std::invalid_argument(
           "rotary_embedding: sequence_length > 0 required when position_ids "
-          "omitted");
+          "has fewer than input_rows values");
     }
     if (rows % sequence_length != 0) {
       throw std::invalid_argument(
-          "rotary_embedding: input rows must be multiple of sequence_length "
-          "when position_ids omitted");
+          "rotary_embedding: input rows must be multiple of sequence_length");
     }
   }
 
@@ -94,7 +94,9 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> rotary_embedding(
 
   for (Eigen::Index r = 0; r < rows; ++r) {
     int pos = 0;
-    if (use_explicit_positions) {
+    if (position_count == 1) {
+      pos = (*position_ids)(0) + static_cast<int>(r % sequence_length);
+    } else if (position_count == rows) {
       pos = (*position_ids)(r);
     } else {
       pos = static_cast<int>(r % sequence_length);
