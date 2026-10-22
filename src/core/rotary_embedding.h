@@ -2,9 +2,7 @@
 #define ROTARY_EMBEDDING_H
 
 #include <Eigen/Dense>
-#include <optional>
 #include <stdexcept>
-#include <string>
 
 /**
  * Llama-style rotate_half on the last dimension: x = [x1, x2] -> [-x2, x1].
@@ -23,34 +21,28 @@ void rotary_rotate_half_row(
 /**
  * Apply rotary positional embeddings (RoPE) with precomputed cos/sin cache.
  *
- * Logical I/O (matching graph / ONNX-style RotaryEmbedding):
- * - input:  (batch * sequence_length, hidden_dim)
- * - position_ids: optional int64 vector. A length-1 vector is the starting
- *   position for each sequence (row r gets position_ids[0] + r %
- *   sequence_length), matching ORT's single-element position_ids input. A
- *   length-(batch*sequence_length) vector gives one absolute position per row.
- *   If omitted or empty, positions are implicit for prefill: row r has position
- *   (r % sequence_length).
- * - cos_cache, sin_cache: (max_positions, head_dim/2), use rows indexed by
- *   position (max row index must stay < cache.rows()).
- * - num_heads: hidden_dim must be divisible; head_dim = hidden_dim / num_heads.
+ * Batch size is fixed to 1, so the input is (sequence_length, hidden_dim).
+ * position_id is the absolute position of the first row: 0 for prefill, the
+ * current token position for decode. Row r uses position_id + r.
  *
- * Same formula as common HF Llama: cos/sin for head are each length head_dim/2,
+ * cos_cache, sin_cache: (max_positions, head_dim/2), indexed by absolute
+ * position.
+ * num_heads: hidden_dim must be divisible by it.
+ *
+ * Same formula as HF Llama: cos/sin for a head each have length head_dim/2,
  * broadcast by concatenating [cos, cos] along the head axis, then
  *   output = input * cos_full + rotate_half(input) * sin_full.
- *
- * @param sequence_length Used only when position_ids is not provided (prefill).
  */
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> rotary_embedding(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input,
-    const std::optional<Eigen::Matrix<int, Eigen::Dynamic, 1>>& position_ids,
+    int position_id,
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& cos_cache,
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& sin_cache,
-    int sequence_length, int num_heads) {
+    int num_heads) {
   const Eigen::Index rows = input.rows();
   const Eigen::Index hidden_dim = input.cols();
-  if (hidden_dim % num_heads != 0) {
+  if (num_heads <= 0 || hidden_dim % num_heads != 0) {
     throw std::invalid_argument(
         "rotary_embedding: hidden_dim must be divisible by num_heads");
   }
@@ -68,23 +60,8 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> rotary_embedding(
     throw std::invalid_argument(
         "rotary_embedding: cos_cache and sin_cache row count must match");
   }
-
-  const Eigen::Index position_count =
-      position_ids.has_value() ? position_ids->size() : 0;
-  if (position_count != 0 && position_count != 1 && position_count != rows) {
-    throw std::invalid_argument(
-        "rotary_embedding: position_ids must contain 1 or input_rows values");
-  }
-  if (position_count != rows) {
-    if (sequence_length <= 0) {
-      throw std::invalid_argument(
-          "rotary_embedding: sequence_length > 0 required when position_ids "
-          "has fewer than input_rows values");
-    }
-    if (rows % sequence_length != 0) {
-      throw std::invalid_argument(
-          "rotary_embedding: input rows must be multiple of sequence_length");
-    }
+  if (position_id < 0 || position_id + rows > cos_cache.rows()) {
+    throw std::out_of_range("rotary_embedding: position out of cache bounds");
   }
 
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(rows, hidden_dim);
@@ -93,19 +70,7 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> rotary_embedding(
   Eigen::Matrix<Scalar, 1, Eigen::Dynamic> sin_full(1, head_dim);
 
   for (Eigen::Index r = 0; r < rows; ++r) {
-    int pos = 0;
-    if (position_count == 1) {
-      pos = (*position_ids)(0) + static_cast<int>(r % sequence_length);
-    } else if (position_count == rows) {
-      pos = (*position_ids)(r);
-    } else {
-      pos = static_cast<int>(r % sequence_length);
-    }
-    if (pos < 0 || pos >= cos_cache.rows()) {
-      throw std::out_of_range(
-          "rotary_embedding: position index " + std::to_string(pos) +
-          " out of cache bounds [0, " + std::to_string(cos_cache.rows()) + ")");
-    }
+    const Eigen::Index pos = static_cast<Eigen::Index>(position_id) + r;
 
     cos_full.leftCols(rope_dim) = cos_cache.row(pos);
     cos_full.rightCols(rope_dim) = cos_cache.row(pos);
