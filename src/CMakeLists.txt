@@ -1,4 +1,5 @@
 add_subdirectory(core)
+add_subdirectory(llm)
 
 add_executable(llm_on_riscv
     main.cpp
