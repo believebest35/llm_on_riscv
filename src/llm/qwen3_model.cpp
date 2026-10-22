@@ -17,7 +17,21 @@
 namespace llm_on_riscv {
 namespace llm {
 
-Qwen3Model::Qwen3Model(const Qwen3Weights& weights) : weights_(weights) {}
+Qwen3Model::Qwen3Model(const Qwen3Weights& weights)
+    : weights_(weights), caches_(Qwen3Config::kLayers) {
+  for (auto& cache : caches_) {
+    cache.key.resize(0, Qwen3Config::kHeadDim);
+    cache.value.resize(0, Qwen3Config::kHeadDim);
+  }
+}
+
+void Qwen3Model::reset() {
+  for (auto& cache : caches_) {
+    cache.key.resize(0, Qwen3Config::kHeadDim);
+    cache.value.resize(0, Qwen3Config::kHeadDim);
+  }
+  past_length_ = 0;
+}
 
 Eigen::MatrixXf Qwen3Model::embed(const std::vector<int>& tokens) const {
   Eigen::MatrixXf result(tokens.size(), Qwen3Config::kHidden);
@@ -28,17 +42,24 @@ Eigen::MatrixXf Qwen3Model::embed(const std::vector<int>& tokens) const {
 }
 
 Eigen::MatrixXf Qwen3Model::prefill(const std::vector<int>& tokens) {
-  return forward(tokens);
+  reset();
+  return forward(tokens, true);
 }
 
-Eigen::MatrixXf Qwen3Model::forward(const std::vector<int>& tokens) {
+Eigen::MatrixXf Qwen3Model::decode(int token) {
+  return forward({token}, false);
+}
+
+Eigen::MatrixXf Qwen3Model::forward(
+    const std::vector<int>& tokens, bool reset_cache) {
   const int sequence = static_cast<int>(tokens.size());
+  const int position_start = reset_cache ? 0 : past_length_;
+  const int total_sequence = position_start + sequence;
 
   Eigen::MatrixXf residual = embed(tokens);
   Eigen::MatrixXf mlp_down;
   Eigen::MatrixXf attn_input;
   Eigen::MatrixXf mlp_input;
-  Eigen::MatrixXf empty_past(0, Qwen3Config::kHeadDim);
 
   for (int layer_index = 0; layer_index < Qwen3Config::kLayers; ++layer_index) {
     const auto& layer = weights_.layers[layer_index];
@@ -69,17 +90,20 @@ Eigen::MatrixXf Qwen3Model::forward(const std::vector<int>& tokens) {
     key = reshape(key, sequence, Qwen3Config::kKvDim);
 
     query = rotary_embedding(
-        query, 0, weights_.cos_cache, weights_.sin_cache,
+        query, position_start, weights_.cos_cache, weights_.sin_cache,
         Qwen3Config::kQueryHeads);
     key = rotary_embedding(
-        key, 0, weights_.cos_cache, weights_.sin_cache,
+        key, position_start, weights_.cos_cache, weights_.sin_cache,
         Qwen3Config::kKvHeads);
 
     Eigen::MatrixXf attention;
     Eigen::MatrixXf present_key;
     Eigen::MatrixXf present_value;
     std::tie(attention, present_key, present_value) = group_query_attention(
-        query, key, value, empty_past, empty_past, sequence - 1, sequence);
+        query, key, value, caches_[layer_index].key, caches_[layer_index].value,
+        total_sequence - 1, total_sequence);
+    caches_[layer_index].key = present_key;
+    caches_[layer_index].value = present_value;
 
     Eigen::MatrixXf attention_output =
         matrix_multiply(attention, layer.o_proj);
@@ -95,6 +119,8 @@ Eigen::MatrixXf Qwen3Model::forward(const std::vector<int>& tokens) {
   Eigen::MatrixXf final_output;
   std::tie(final_output, std::ignore) = skip_simplified_layer_normalization(
       residual, mlp_down, weights_.final_norm, Qwen3Config::kEpsilon);
+
+  past_length_ = total_sequence;
   return final_output * weights_.embedding.transpose();
 }
 
