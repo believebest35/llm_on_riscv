@@ -1,5 +1,6 @@
 add_library(qwen3_runtime STATIC
     weights.cpp
+    qwen3_model.cpp
 )
 
 target_include_directories(qwen3_runtime
