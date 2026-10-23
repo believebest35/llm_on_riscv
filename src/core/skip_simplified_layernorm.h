@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <cmath>
 #include <stdexcept>
+#include <tuple>
 
 /**
  * @brief SkipSimplifiedLayerNormalization: adds skip (residual) to input X and
@@ -11,15 +12,19 @@
  *
  * Y = ( (X + skip) / rms ) * gamma
  *
+ * Returns both outputs used by the model:
+ * - Y: normalized output (m x n)
+ * - input_skip_bias_sum: X + skip (m x n)
+ *
  * @tparam Scalar
  * @param X Input matrix (m x n)
  * @param skip Skip/residual matrix (m x n)
  * @param gamma Scale vector (n)
  * @param epsilon Small constant for numerical stability
- * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Output (m x n)
  */
 template <typename Scalar>
-Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
+std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
+           Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>>
 skip_simplified_layer_normalization(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& skip,
@@ -36,21 +41,21 @@ skip_simplified_layer_normalization(
         std::to_string(X.cols()) +
         ", gamma.size() = " + std::to_string(gamma.size()));
   }
-  if (epsilon <= static_cast<Scalar>(0)) {
-    throw std::invalid_argument("epsilon must be > 0");
-  }
 
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y(X.rows(), X.cols());
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> input_skip_bias_sum(
+      X.rows(), X.cols());
 
   for (int i = 0; i < X.rows(); ++i) {
-    const auto row = X.row(i) + skip.row(i);
+    input_skip_bias_sum.row(i) = X.row(i) + skip.row(i);
+    const auto row = input_skip_bias_sum.row(i);
     const Scalar mean_sq =
         row.array().square().sum() / static_cast<Scalar>(X.cols());
     const Scalar rms = std::sqrt(mean_sq + epsilon);
     Y.row(i) = (row / rms).cwiseProduct(gamma.transpose());
   }
 
-  return Y;
+  return {Y, input_skip_bias_sum};
 }
 
 #endif  // SKIP_SIMPLIFIED_LAYERNORM_H

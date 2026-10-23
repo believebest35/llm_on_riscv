@@ -17,27 +17,22 @@ class GatherTest : public GTestBase {
     const int rows = data.rows();
     const int cols = data.cols();
     const int num_indices = static_cast<int>(indices.size());
+    const int kept_size = (axis == 0) ? cols : rows;
 
-    if (axis == 0) {
-      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(num_indices,
-                                                                   cols);
-      int out_i = 0;
-      for (int i = 0; i < indices.rows(); ++i) {
-        for (int j = 0; j < indices.cols(); ++j) {
-          IndexType idx = indices(i, j);
-          result.row(out_i++) = data.row(static_cast<int>(idx));
-        }
-      }
-      return result;
-    }
-
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(rows,
-                                                                 num_indices);
-    int out_j = 0;
+    // ONNX output: indices.shape + the non-gathered data dim, with the
+    // gathered axis flattened first.
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(num_indices,
+                                                                 kept_size);
+    int out_i = 0;
     for (int i = 0; i < indices.rows(); ++i) {
       for (int j = 0; j < indices.cols(); ++j) {
-        IndexType idx = indices(i, j);
-        result.col(out_j++) = data.col(static_cast<int>(idx));
+        const int idx = static_cast<int>(indices(i, j));
+        if (axis == 0) {
+          result.row(out_i) = data.row(idx);
+        } else {
+          result.row(out_i) = data.col(idx).transpose();
+        }
+        ++out_i;
       }
     }
     return result;
@@ -59,26 +54,16 @@ class GatherTest : public GTestBase {
              data, indices, axis)))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(GatherTest, RandomMatrices) {
+TEST_F(GatherTest, ValidInputs) {
   const std::vector<std::tuple<int, int, int, int>> test_cases = {
       {10, 20, 5, 0}, {10, 20, 5, 1}, {5, 5, 10, 0},
       {5, 5, 10, 1},  {64, 128, 32, 0}, {64, 128, 32, 1},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {151936, 1024, 4, 0}, {1, 2, 1, 1},
   };
 
   const float tolerance = 1e-5;
@@ -98,10 +83,60 @@ TEST_F(GatherTest, RandomMatrices) {
 
     test_with_golden<float, int>(data, idx, axis, tolerance, test_name);
   }
+
+  // Hand-picked cases: non-random values / alternative
+  // argument forms, checked against the same reference.
+  {
+    Eigen::MatrixXf data(2, 3);
+    data << 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f;
+
+    // Negative index counts from the end: -1 selects the last row.
+    Eigen::MatrixXi row_idx(1, 2);
+    row_idx << -1, 0;
+    auto rows = gather<float, int>(data, row_idx, 0);
+    EXPECT_EQ(rows.rows(), 2);
+    EXPECT_EQ(rows.cols(), 3);
+    EXPECT_FLOAT_EQ(rows(0, 0), 4.0f);
+    EXPECT_FLOAT_EQ(rows(1, 0), 1.0f);
+
+    // Negative axis counts from the back: -1 is the columns.
+    Eigen::MatrixXi col_idx(1, 2);
+    col_idx << 2, 0;
+    auto cols = gather<float, int>(data, col_idx, -1);
+    EXPECT_EQ(cols.rows(), 2);
+    EXPECT_EQ(cols.cols(), 2);
+    EXPECT_FLOAT_EQ(cols(0, 0), 3.0f);
+    EXPECT_FLOAT_EQ(cols(0, 1), 6.0f);
+    EXPECT_FLOAT_EQ(cols(1, 0), 1.0f);
+    EXPECT_FLOAT_EQ(cols(1, 1), 4.0f);
+
+    // Gather a scalar from a shape vector: data (2,) and indices () in the
+    // Qwen3 graph, represented as 2x1 data and a 1x1 index here.
+    Eigen::MatrixXf shape_vec(2, 1);
+    shape_vec << 4.0f, 7.0f;
+    Eigen::MatrixXi scalar_idx(1, 1);
+    scalar_idx << 1;
+    auto scalar = gather<float, int>(shape_vec, scalar_idx, 0);
+    EXPECT_EQ(scalar.rows(), 1);
+    EXPECT_EQ(scalar.cols(), 1);
+    EXPECT_FLOAT_EQ(scalar(0, 0), 7.0f);
+  }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
+
+
+TEST_F(GatherTest, InvalidInputs) {
+  Eigen::MatrixXf data(2, 3);
+  data << 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f;
+
+  Eigen::MatrixXi idx(1, 1);
+  idx << 0;
+  EXPECT_THROW((gather<float, int>(data, idx, 2)), std::invalid_argument);
+
+  Eigen::MatrixXi out_of_range(1, 1);
+  out_of_range << 5;
+  EXPECT_THROW((gather<float, int>(data, out_of_range, 0)),
+               std::invalid_argument);
+  EXPECT_THROW((gather<float, int>(data, out_of_range, 1)),
+               std::invalid_argument);
 }

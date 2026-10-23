@@ -71,7 +71,7 @@ class GroupQueryAttentionTest : public GTestBase {
         Scalar max_score = -std::numeric_limits<Scalar>::infinity();
 
         for (int ks = 0; ks < total_sequence_length; ++ks) {
-          if (ks > causal_limit || ks >= seqlens_k) {
+          if (ks > causal_limit || ks > seqlens_k) {
             scores[ks] = -std::numeric_limits<Scalar>::infinity();
             continue;
           }
@@ -141,60 +141,29 @@ class GroupQueryAttentionTest : public GTestBase {
                 total_sequence_length))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_output.rows(), golden_output.rows())
-        << "Output row mismatch: " << test_description;
-    EXPECT_EQ(impl_output.cols(), golden_output.cols())
-        << "Output col mismatch: " << test_description;
-    EXPECT_EQ(impl_pk.rows(), golden_pk.rows())
-        << "PresentKey row mismatch: " << test_description;
-    EXPECT_EQ(impl_pk.cols(), golden_pk.cols())
-        << "PresentKey col mismatch: " << test_description;
-    EXPECT_EQ(impl_pv.rows(), golden_pv.rows())
-        << "PresentValue row mismatch: " << test_description;
-    EXPECT_EQ(impl_pv.cols(), golden_pv.cols())
-        << "PresentValue col mismatch: " << test_description;
-
-    Scalar l2_diff_output =
-        calculate_l2_difference(impl_output, golden_output);
-    EXPECT_LE(l2_diff_output, tolerance)
-        << "Output L2 diff too large: " << test_description;
-
-    Scalar l2_diff_pk = calculate_l2_difference(impl_pk, golden_pk);
-    EXPECT_LE(l2_diff_pk, tolerance)
-        << "PresentKey L2 diff too large: " << test_description;
-
-    Scalar l2_diff_pv = calculate_l2_difference(impl_pv, golden_pv);
-    EXPECT_LE(l2_diff_pv, tolerance)
-        << "PresentValue L2 diff too large: " << test_description;
-
-    std::cout << test_description
-              << "\n  Output  - Max abs diff: "
-              << calculate_max_abs_difference(impl_output, golden_output)
-              << " RMSE: " << calculate_rmse(impl_output, golden_output)
-              << " L2: " << l2_diff_output
-              << "\n  PresKey - Max abs diff: "
-              << calculate_max_abs_difference(impl_pk, golden_pk)
-              << " RMSE: " << calculate_rmse(impl_pk, golden_pk)
-              << " L2: " << l2_diff_pk
-              << "\n  PresVal - Max abs diff: "
-              << calculate_max_abs_difference(impl_pv, golden_pv)
-              << " RMSE: " << calculate_rmse(impl_pv, golden_pv)
-              << " L2: " << l2_diff_pv << std::endl;
+    expect_matrix_near(impl_output, golden_output, tolerance,
+                       test_description + " [output]");
+    expect_matrix_near(impl_pk, golden_pk, tolerance,
+                       test_description + " [present_key]");
+    expect_matrix_near(impl_pv, golden_pv, tolerance,
+                       test_description + " [present_value]");
   }
 };
 
-TEST_F(GroupQueryAttentionTest, RandomMatrices) {
+TEST_F(GroupQueryAttentionTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {3, 0},
       {1, 4},
       {1, 8},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {4, 3},
   };
 
   const float tolerance = 1e-3f;
 
   for (const auto& [seq, past_seq] : test_cases) {
     const int total_seq = past_seq + seq;
-    const int seqlens_k = total_seq;
+    const int seqlens_k = total_seq - 1;
 
     auto query =
         generate_random_matrix<float>(seq, kQueryHidden, -0.5f, 0.5f);
@@ -213,10 +182,50 @@ TEST_F(GroupQueryAttentionTest, RandomMatrices) {
     test_with_golden(query, key, value, past_key, past_value, seqlens_k,
                      total_seq, tolerance, test_name);
   }
+
+  // Hand-picked cases: non-random values / alternative
+  // argument forms, checked against the same reference.
+  {
+    // past is non-empty and seqlens_k hides the newest key position.
+    constexpr int kSeq = 2;
+    constexpr int kPast = 1;
+    constexpr int kTotal = kSeq + kPast;
+
+    auto query = generate_random_matrix<float>(kSeq, kQueryHidden, -0.5f, 0.5f);
+    auto key = generate_random_matrix<float>(kSeq, kKvHidden, -0.5f, 0.5f);
+    auto value = generate_random_matrix<float>(kSeq, kKvHidden, -0.5f, 0.5f);
+    auto past_key =
+        generate_random_matrix<float>(kNumKvHeads * kPast, kHeadDim, -0.5f, 0.5f);
+    auto past_value =
+        generate_random_matrix<float>(kNumKvHeads * kPast, kHeadDim, -0.5f, 0.5f);
+
+    test_with_golden(query, key, value, past_key, past_value, kPast, kTotal,
+                     1e-3f, "GQA seqlens_k hides newest key");
+  }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
+
+
+TEST_F(GroupQueryAttentionTest, InvalidInputs) {
+  constexpr int kSeq = 2;
+
+  auto query = generate_random_matrix<float>(kSeq, kQueryHidden, -0.5f, 0.5f);
+  auto key = generate_random_matrix<float>(kSeq, kKvHidden, -0.5f, 0.5f);
+  auto value = generate_random_matrix<float>(kSeq, kKvHidden, -0.5f, 0.5f);
+  Eigen::MatrixXf empty_past(0, kHeadDim);
+
+  // Wrong query hidden size.
+  auto bad_query = generate_random_matrix<float>(kSeq, kKvHidden);
+  EXPECT_THROW(group_query_attention<float>(bad_query, key, value, empty_past,
+                                            empty_past, kSeq, kSeq),
+               std::invalid_argument);
+
+  // seqlens_k is the last valid KV index, so it must be in
+  // [0, total_sequence_length).
+  EXPECT_THROW(group_query_attention<float>(query, key, value, empty_past,
+                                            empty_past, -1, kSeq),
+               std::invalid_argument);
+  EXPECT_THROW(group_query_attention<float>(query, key, value, empty_past,
+                                            empty_past, kSeq, kSeq),
+               std::invalid_argument);
 }

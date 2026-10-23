@@ -33,27 +33,17 @@ class SigmoidTest : public GTestBase {
     ASSERT_NO_THROW(golden_result = golden_reference_sigmoid(X))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(SigmoidTest, RandomMatrices) {
+TEST_F(SigmoidTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {1, 1},     {1, 1024},    {1024, 1},
       {2, 3},     {64, 64},     {256, 256},
       {1024, 1024},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {4, 3072},
   };
 
   const float tolerance = 1e-4;
@@ -66,10 +56,20 @@ TEST_F(SigmoidTest, RandomMatrices) {
 
     test_with_golden(X, tolerance, test_name);
   }
+
+  // Hand-picked cases: non-random values / alternative
+  // argument forms, checked against the same reference.
+  {
+    Eigen::MatrixXf X(1, 5);
+    X << 0.0f, 100.0f, -100.0f, 20.0f, -20.0f;
+
+    auto Y = sigmoid<float>(X);
+    EXPECT_FLOAT_EQ(Y(0, 0), 0.5f);
+    EXPECT_NEAR(Y(0, 1), 1.0f, 1e-6f);
+    EXPECT_NEAR(Y(0, 2), 0.0f, 1e-6f);
+    EXPECT_NEAR(Y(0, 3), 1.0f, 1e-6f);
+    EXPECT_NEAR(Y(0, 4), 0.0f, 1e-6f);
+  }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
-}
+

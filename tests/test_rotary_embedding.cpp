@@ -13,9 +13,10 @@ class RotaryEmbeddingTest : public GTestBase {
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
   golden_reference_rotary_embedding(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input,
+      int position_id,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& cos_cache,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& sin_cache,
-      int sequence_length, int num_heads) {
+      int num_heads) {
     const Eigen::Index rows = input.rows();
     const Eigen::Index hidden_dim = input.cols();
     const Eigen::Index head_dim = hidden_dim / num_heads;
@@ -28,7 +29,7 @@ class RotaryEmbeddingTest : public GTestBase {
     Eigen::Matrix<Scalar, 1, Eigen::Dynamic> sin_full(1, head_dim);
 
     for (Eigen::Index r = 0; r < rows; ++r) {
-      int pos = static_cast<int>(r % sequence_length);
+      const Eigen::Index pos = static_cast<Eigen::Index>(position_id) + r;
 
       cos_full.leftCols(rope_dim) = cos_cache.row(pos);
       cos_full.rightCols(rope_dim) = cos_cache.row(pos);
@@ -49,42 +50,50 @@ class RotaryEmbeddingTest : public GTestBase {
   template <typename Scalar>
   void test_with_golden(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input,
+      int position_id,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& cos_cache,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& sin_cache,
-      int sequence_length, int num_heads, Scalar tolerance,
+      int num_heads, Scalar tolerance,
       const std::string& test_description = "") {
-    std::optional<Eigen::Matrix<int, Eigen::Dynamic, 1>> no_pos;
-
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
     ASSERT_NO_THROW(impl_result = rotary_embedding<Scalar>(
-                        input, no_pos, cos_cache, sin_cache, sequence_length,
-                        num_heads))
+                        input, position_id, cos_cache, sin_cache, num_heads))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
     ASSERT_NO_THROW(golden_result = golden_reference_rotary_embedding(
-                        input, cos_cache, sin_cache, sequence_length, num_heads))
+                        input, position_id, cos_cache, sin_cache, num_heads))
         << "Golden reference failed: " << test_description;
 
-    EXPECT_EQ(impl_result.rows(), golden_result.rows())
-        << "Row count mismatch: " << test_description;
-    EXPECT_EQ(impl_result.cols(), golden_result.cols())
-        << "Column count mismatch: " << test_description;
-
-    Scalar l2_diff = calculate_l2_difference(impl_result, golden_result);
-    EXPECT_LE(l2_diff, tolerance)
-        << "L2 difference exceeds tolerance: " << test_description;
-
-    std::cout << test_description << "\nMax absolute difference: "
-              << calculate_max_abs_difference(impl_result, golden_result)
-              << "\nRMSE: " << calculate_rmse(impl_result, golden_result)
-              << "\nL2 difference: " << l2_diff << std::endl;
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(RotaryEmbeddingTest, RandomMatrices) {
+namespace {
+
+// Build a genuine RoPE table for positions [0, rows) so that
+// cos^2 + sin^2 == 1 and the transform is a pure rotation.
+void fill_rope_table(Eigen::MatrixXf& cos_cache, Eigen::MatrixXf& sin_cache,
+                     int cache_rows, int rows, int rope_dim, int head_dim) {
+  cos_cache = Eigen::MatrixXf::Zero(cache_rows, rope_dim);
+  sin_cache = Eigen::MatrixXf::Zero(cache_rows, rope_dim);
+  for (int p = 0; p < rows; ++p) {
+    for (int d = 0; d < rope_dim; ++d) {
+      const float freq = std::pow(10000.0f, -2.0f * d / head_dim);
+      cos_cache(p, d) = std::cos(static_cast<float>(p) * freq);
+      sin_cache(p, d) = std::sin(static_cast<float>(p) * freq);
+    }
+  }
+}
+
+}  // namespace
+
+
+TEST_F(RotaryEmbeddingTest, ValidInputs) {
   const std::vector<std::tuple<int, int, int>> test_cases = {
       {1, 1, 4}, {2, 2, 4}, {3, 4, 8}, {1, 16, 128}, {3, 16, 128},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {4, 16, 128}, {4, 8, 128},
   };
 
   const float tolerance = 1e-4f;
@@ -104,13 +113,87 @@ TEST_F(RotaryEmbeddingTest, RandomMatrices) {
                             " heads=" + std::to_string(num_heads) +
                             " head_dim=" + std::to_string(head_dim);
 
-    test_with_golden(input, cos_cache, sin_cache, seq, num_heads, tolerance,
+    test_with_golden(input, 0, cos_cache, sin_cache, num_heads, tolerance,
                      test_name);
+  }
+
+  // Hand-picked cases: genuine cos/sin table over four positions.
+  {
+    constexpr int kHeads = 4;
+    constexpr int kHeadDim = 8;
+    constexpr int kRows = 4;
+
+    Eigen::MatrixXf cos_cache;
+    Eigen::MatrixXf sin_cache;
+    fill_rope_table(cos_cache, sin_cache, 16, kRows, kHeadDim / 2, kHeadDim);
+
+    auto input = generate_random_matrix<float>(kRows, kHeads * kHeadDim,
+                                               -0.5f, 0.5f);
+
+    test_with_golden(input, 0, cos_cache, sin_cache, kHeads, 1e-5f,
+                     "RoPE genuine table");
+  }
+
+  // Single start position: rows use position_id + r.
+  {
+    constexpr int kHeads = 4;
+    constexpr int kHeadDim = 8;
+    constexpr int kRows = 6;
+
+    Eigen::MatrixXf cos_cache;
+    Eigen::MatrixXf sin_cache;
+    fill_rope_table(cos_cache, sin_cache, 16, kRows, kHeadDim / 2, kHeadDim);
+
+    auto input =
+        generate_random_matrix<float>(kRows, kHeads * kHeadDim, -0.5f, 0.5f);
+
+    test_with_golden(input, 3, cos_cache, sin_cache, kHeads, 1e-5f,
+                     "RoPE single start position");
+  }
+
+  // Full-size cache from docs/01_dev.md: (40960, 64) for head_dim=128.
+  {
+    constexpr int kSeq = 4;
+    constexpr int kHeads = 16;
+    constexpr int kHeadDim = 128;
+    constexpr int kMaxPos = 40960;
+
+    auto input =
+        generate_random_matrix<float>(kSeq, kHeads * kHeadDim, -0.5f, 0.5f);
+    auto cos_cache = generate_random_matrix<float>(
+        kMaxPos, kHeadDim / 2, -1.0f, 1.0f);
+    auto sin_cache = generate_random_matrix<float>(
+        kMaxPos, kHeadDim / 2, -1.0f, 1.0f);
+
+    test_with_golden(input, 0, cos_cache, sin_cache, kHeads, 1e-4f,
+                     "RoPE cache 40960x64");
   }
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  ::testing::GTEST_FLAG(print_time) = false;
-  return RUN_ALL_TESTS();
+
+
+
+TEST_F(RotaryEmbeddingTest, InvalidInputs) {
+  constexpr int kHeads = 4;
+  constexpr int kHeadDim = 8;
+
+  Eigen::MatrixXf cos_cache;
+  Eigen::MatrixXf sin_cache;
+  fill_rope_table(cos_cache, sin_cache, 16, 4, kHeadDim / 2, kHeadDim);
+
+  // hidden_dim (6) is not divisible by num_heads (4).
+  auto odd_input = generate_random_matrix<float>(2, 6);
+  EXPECT_THROW(rotary_embedding<float>(odd_input, 0, cos_cache, sin_cache,
+                                       kHeads),
+               std::invalid_argument);
+
+  // Cache last dim must equal head_dim / 2.
+  auto bad_cache = generate_random_matrix<float>(16, kHeadDim);
+  auto input = generate_random_matrix<float>(2, kHeads * kHeadDim);
+  EXPECT_THROW(rotary_embedding<float>(input, 0, bad_cache, sin_cache, kHeads),
+               std::invalid_argument);
+
+  // position_id + input rows must stay within the cache.
+  EXPECT_THROW(rotary_embedding<float>(input, 15, cos_cache, sin_cache, kHeads),
+               std::out_of_range);
 }

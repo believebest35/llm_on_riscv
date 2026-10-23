@@ -5,21 +5,14 @@
 #include <stdexcept>
 
 /**
- * @brief Concatenate two matrices along a specified axis.
- *
- * A simple helper matching ONNX `Concat` semantics for two inputs and
- * two-dimensional tensors.  Only axes 0 (row-wise) and 1 (column-wise) are
- * supported.  The matrices must agree in size along the non-concatenation
- * axis.
+ * @brief Concatenate two matrices along a specified axis (ONNX `Concat`).
  *
  * @tparam Scalar Element type stored in the matrices.
  * @param A First input matrix.
  * @param B Second input matrix.
- * @param axis Axis to concatenate along: 0 for vertical (stack rows), 1 for
- *             horizontal (append columns).
+ * @param axis Axis to concatenate along: 0 stacks rows, 1 appends columns.
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Result of
  *         concatenation.
- * @throws std::invalid_argument if axis is invalid or dimensions mismatch.
  */
 
 template <typename Scalar>
