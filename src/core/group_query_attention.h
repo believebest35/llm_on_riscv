@@ -9,20 +9,23 @@
 #include <vector>
 
 /**
- * @brief Group Query Attention kernel for inference.
+ * @brief Group query attention for batch size one.
  *
- * Note: this implementation is specialized for batch_size == 1.
+ * Batch size is fixed to 1, so all inputs are flattened to 2-D.
  *
- * Shapes:
- * - query:      (sequence, 2048) = (S, num_query_heads * head_dim)
- * - key/value:  (sequence, 1024) = (S, num_kv_heads * head_dim)
- * - past_key/v: (8 * past_sequence, 128)
- * - seqlens_k:  scalar, last valid KV index (total_sequence_length - 1)
- * - total_sequence_length: scalar, must equal past_sequence + sequence
- *
- * Returns:
- * - output:      (sequence, 2048)
- * - present_k/v: (8 * total_sequence_length, 128)
+ * @tparam Scalar Element type of the inputs, caches, and outputs.
+ * @param query Query matrix (sequence x 2048).
+ * @param key Key matrix (sequence x 1024).
+ * @param value Value matrix (sequence x 1024).
+ * @param past_key Past key cache (8 * past_sequence x 128).
+ * @param past_value Past value cache (8 * past_sequence x 128).
+ * @param seqlens_k Last valid KV index (total_sequence_length - 1).
+ * @param total_sequence_length Must equal past_sequence + sequence.
+ * @return std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
+ *         Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
+ *         Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>> Output
+ *         (sequence x 2048), present_key and present_value
+ *         (8 * total_sequence_length x 128).
  */
 template <typename Scalar>
 std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
@@ -65,7 +68,8 @@ group_query_attention(
 
   if (total_sequence_length != past_sequence + sequence) {
     throw std::invalid_argument(
-        "total_sequence_length must equal past_sequence_length + sequence_length");
+        "total_sequence_length must equal "
+        "past_sequence_length + sequence_length");
   }
   if (seqlens_k < 0 || seqlens_k >= total_sequence_length) {
     throw std::invalid_argument("seqlens_k must be a valid KV index");
@@ -78,23 +82,31 @@ group_query_attention(
 
   for (int h = 0; h < kNumKeyValueHeads; ++h) {
     if (past_sequence > 0) {
-      present_key.block(h * total_sequence_length, 0, past_sequence, kHeadDim) =
+      present_key.block(h * total_sequence_length, 0, past_sequence,
+                        kHeadDim) =
           past_key.block(h * past_sequence, 0, past_sequence, kHeadDim);
-      present_value.block(h * total_sequence_length, 0, past_sequence, kHeadDim) =
+      present_value.block(h * total_sequence_length, 0, past_sequence,
+                          kHeadDim) =
           past_value.block(h * past_sequence, 0, past_sequence, kHeadDim);
     }
-    present_key.block(h * total_sequence_length + past_sequence, 0, sequence, kHeadDim) =
+    present_key.block(h * total_sequence_length + past_sequence, 0, sequence,
+                      kHeadDim) =
         key.block(0, h * kHeadDim, sequence, kHeadDim);
-    present_value.block(h * total_sequence_length + past_sequence, 0, sequence, kHeadDim) =
+    present_value.block(h * total_sequence_length + past_sequence, 0, sequence,
+                        kHeadDim) =
         value.block(0, h * kHeadDim, sequence, kHeadDim);
   }
 
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(sequence, kNumQueryHeads * kHeadDim);
-  const Scalar scale = static_cast<Scalar>(1.0 / std::sqrt(static_cast<double>(kHeadDim)));
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(
+      sequence, kNumQueryHeads * kHeadDim);
+  const Scalar scale = static_cast<Scalar>(
+      1.0 / std::sqrt(static_cast<double>(kHeadDim)));
   const Scalar neg_inf = -std::numeric_limits<Scalar>::infinity();
 
-  // Build mask once: causal mask (by query position) + seqlens mask (by key position).
-  Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic> valid_mask(sequence, total_sequence_length);
+  // Build the mask once: causal mask by query position and seqlens mask by key
+  // position.
+  Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic> valid_mask(
+      sequence, total_sequence_length);
   for (int qs = 0; qs < sequence; ++qs) {
     const int causal_limit = past_sequence + qs;
     for (int ks = 0; ks < total_sequence_length; ++ks) {
@@ -104,19 +116,21 @@ group_query_attention(
 
   for (int qh = 0; qh < kNumQueryHeads; ++qh) {
     const int kvh = qh / 2;
+    const int kv_offset = kvh * total_sequence_length;
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> q_block =
         query.block(0, qh * kHeadDim, sequence, kHeadDim);
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> k_block =
-        present_key.block(kvh * total_sequence_length, 0, total_sequence_length, kHeadDim);
+        present_key.block(kv_offset, 0, total_sequence_length, kHeadDim);
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> v_block =
-        present_value.block(kvh * total_sequence_length, 0, total_sequence_length, kHeadDim);
+        present_value.block(kv_offset, 0, total_sequence_length, kHeadDim);
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> scores =
         (q_block * k_block.transpose()) * scale;
     scores.array() = valid_mask.select(scores.array(), neg_inf);
 
     // Keep a row-wise loop for numerically stable softmax.
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> probs(sequence, total_sequence_length);
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> probs(
+        sequence, total_sequence_length);
     for (int qs = 0; qs < sequence; ++qs) {
       const Scalar max_score = scores.row(qs).maxCoeff();
       Eigen::Array<Scalar, 1, Eigen::Dynamic> row_exp =

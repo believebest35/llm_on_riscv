@@ -1,8 +1,3 @@
-#include <gtest/gtest.h>
-
-#include <string>
-#include <vector>
-
 #include "core/concat.h"
 #include "gtest_base.h"
 
@@ -16,13 +11,30 @@ class ConcatTest : public GTestBase {
     if (axis == 0) {
       Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> out(
           A.rows() + B.rows(), A.cols());
-      out << A, B;
+      for (int i = 0; i < A.rows(); ++i) {
+        for (int j = 0; j < A.cols(); ++j) {
+          out(i, j) = A(i, j);
+        }
+      }
+      for (int i = 0; i < B.rows(); ++i) {
+        for (int j = 0; j < B.cols(); ++j) {
+          out(A.rows() + i, j) = B(i, j);
+        }
+      }
+      return out;
+    } else {
+      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> out(
+          A.rows(), A.cols() + B.cols());
+      for (int i = 0; i < A.rows(); ++i) {
+        for (int j = 0; j < A.cols(); ++j) {
+          out(i, j) = A(i, j);
+        }
+        for (int j = 0; j < B.cols(); ++j) {
+          out(i, A.cols() + j) = B(i, j);
+        }
+      }
       return out;
     }
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> out(A.rows(),
-                                                              A.cols() + B.cols());
-    out << A, B;
-    return out;
   }
 
   template <typename Scalar>
@@ -51,7 +63,7 @@ TEST_F(ConcatTest, ValidInputs) {
       {1, 1, 1, 1, 0}, {1, 1, 3, 1, 0},
   };
 
-  const float tolerance = 1e-5;
+  const float tolerance = 0.0f;
 
   for (const auto& [rA, cA, rB, cB, axis] : test_cases) {
     auto A = generate_random_matrix<float>(rA, cA, -1.0f, 1.0f);
@@ -65,7 +77,6 @@ TEST_F(ConcatTest, ValidInputs) {
     test_with_golden(A, B, axis, tolerance, test_name);
   }
 }
-
 
 TEST_F(ConcatTest, InvalidInputs) {
   auto A = generate_random_matrix<float>(2, 3);

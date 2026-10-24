@@ -18,9 +18,8 @@
  */
 
 template <typename OutScalar, typename InScalar>
-Eigen::Matrix<OutScalar, Eigen::Dynamic, Eigen::Dynamic> cast_matrix(
+Eigen::Matrix<OutScalar, Eigen::Dynamic, Eigen::Dynamic> cast(
     const Eigen::Matrix<InScalar, Eigen::Dynamic, Eigen::Dynamic>& A) {
-  // Eigen provides a convenient cast() member function for this purpose.
   return A.template cast<OutScalar>();
 }
 

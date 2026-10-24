@@ -1,7 +1,3 @@
-#include <gtest/gtest.h>
-
-#include <string>
-
 #include "core/matmul.h"
 #include "gtest_base.h"
 
@@ -20,7 +16,6 @@ class MatMulTest : public GTestBase {
     }
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C(m, p);
-    C.setZero();
 
     for (int i = 0; i < m; ++i) {
       for (int j = 0; j < p; ++j) {
@@ -41,7 +36,7 @@ class MatMulTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B,
       Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result = matrix_multiply(A, B))
+    ASSERT_NO_THROW(impl_result = matmul(A, B))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
@@ -78,5 +73,5 @@ TEST_F(MatMulTest, ValidInputs) {
 TEST_F(MatMulTest, InvalidInputs) {
   auto A = generate_random_matrix<float>(2, 3);
   auto B = generate_random_matrix<float>(4, 5);
-  EXPECT_THROW(matrix_multiply(A, B), std::invalid_argument);
+  EXPECT_THROW(matmul(A, B), std::invalid_argument);
 }

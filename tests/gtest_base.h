@@ -6,6 +6,8 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <tuple>
+#include <vector>
 
 class GTestBase : public ::testing::Test {
  protected:

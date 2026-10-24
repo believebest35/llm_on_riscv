@@ -16,11 +16,14 @@
  * - Y: normalized output (m x n)
  * - input_skip_bias_sum: X + skip (m x n)
  *
- * @tparam Scalar
- * @param X Input matrix (m x n)
- * @param skip Skip/residual matrix (m x n)
- * @param gamma Scale vector (n)
- * @param epsilon Small constant for numerical stability
+ * @tparam Scalar Element type of `X`, `skip`, `gamma`, and the outputs.
+ * @param X Input matrix (m x n).
+ * @param skip Skip/residual matrix (m x n).
+ * @param gamma Scale vector (n).
+ * @param epsilon Small constant for numerical stability.
+ * @return std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
+ *         Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>> Y and
+ *         input_skip_bias_sum, both (m x n).
  */
 template <typename Scalar>
 std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,

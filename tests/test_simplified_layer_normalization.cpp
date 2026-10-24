@@ -1,18 +1,11 @@
-#include <gtest/gtest.h>
-
-#include <cmath>
-#include <string>
-#include <tuple>
-#include <vector>
-
-#include "core/simplified_layernorm.h"
+#include "core/simplified_layer_normalization.h"
 #include "gtest_base.h"
 
-class SimplifiedLayerNormTest : public GTestBase {
+class SimplifiedLayerNormalizationTest : public GTestBase {
  protected:
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
-  golden_reference_simplified_layernorm(
+  golden_reference_simplified_layer_normalization(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& scale, Scalar epsilon) {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y(X.rows(), X.cols());
@@ -43,14 +36,14 @@ class SimplifiedLayerNormTest : public GTestBase {
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_simplified_layernorm(X, scale, epsilon))
+    ASSERT_NO_THROW(golden_result = golden_reference_simplified_layer_normalization(X, scale, epsilon))
         << "Golden reference failed: " << test_description;
 
     expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
-TEST_F(SimplifiedLayerNormTest, ValidInputs) {
+TEST_F(SimplifiedLayerNormalizationTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {1, 1},     {2, 3},      {4, 8},      {64, 128},
       {128, 256}, {256, 1024}, {1024, 128}, {1024, 3072},
@@ -59,22 +52,21 @@ TEST_F(SimplifiedLayerNormTest, ValidInputs) {
   };
 
   const float epsilon = 1e-5f;
-  const float tolerance = 1e-4f;
+  const float tolerance = 0.0f;
 
   for (const auto& [rows, cols] : test_cases) {
     auto X = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
     auto w = generate_random_vector<float>(cols, 0.5f, 1.5f);
 
     std::string test_name =
-        "SimplifiedLayerNorm " + std::to_string(rows) + "x" +
+        "SimplifiedLayerNormalization " + std::to_string(rows) + "x" +
         std::to_string(cols);
 
     test_with_golden(X, w, epsilon, tolerance, test_name);
   }
 }
 
-
-TEST_F(SimplifiedLayerNormTest, InvalidInputs) {
+TEST_F(SimplifiedLayerNormalizationTest, InvalidInputs) {
   auto X = generate_random_matrix<float>(4, 8);
   auto bad_scale = generate_random_vector<float>(7);
   EXPECT_THROW(simplified_layer_normalization(X, bad_scale, 1e-5f),

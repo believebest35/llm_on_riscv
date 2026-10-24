@@ -14,7 +14,7 @@
  * @param axis Axis along which to gather: 0 selects rows, 1 selects columns;
  *        negative values count from the back.
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Gathered
- *         values: (num_indices x cols) for axis 0, (num_indices x rows) for
+ *         values: (num_indices x cols) for axis 0, (rows x num_indices) for
  *         axis 1.
  */
 
@@ -33,34 +33,42 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> gather(
   const int rows = data.rows();
   const int cols = data.cols();
   const int num_indices = static_cast<int>(indices.size());
-  const int axis_size = (axis == 0) ? rows : cols;
-  const int kept_size = (axis == 0) ? cols : rows;
 
-  // ONNX keeps indices.shape + the non-gathered data dim, so the gathered axis
-  // is flattened first: (num_indices x cols) for axis 0, (num_indices x rows)
-  // for axis 1.
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(num_indices,
-                                                               kept_size);
-  int out_i = 0;
-  for (int i = 0; i < indices.rows(); ++i) {
-    for (int j = 0; j < indices.cols(); ++j) {
-      IndexType idx = indices(i, j);
-      if (idx < 0) {
-        idx += axis_size;  // ONNX allows negative indices counting from the end
+  if (axis == 0) {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(num_indices,
+                                                                 cols);
+    int out_i = 0;
+    for (int i = 0; i < indices.rows(); ++i) {
+      for (int j = 0; j < indices.cols(); ++j) {
+        IndexType idx = indices(i, j);
+        if (idx < 0) {
+          idx += rows;  // ONNX allows negative indices counting from the end
+        }
+        if (idx < 0 || idx >= rows) {
+          throw std::invalid_argument("gather: index out of bounds");
+        }
+        result.row(out_i++) = data.row(static_cast<int>(idx));
       }
-      if (idx < 0 || idx >= axis_size) {
-        throw std::invalid_argument("gather: index out of bounds");
-      }
-      const int k = static_cast<int>(idx);
-      if (axis == 0) {
-        result.row(out_i) = data.row(k);
-      } else {
-        result.row(out_i) = data.col(k).transpose();
-      }
-      ++out_i;
     }
+    return result;
+  } else {
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(rows,
+                                                                 num_indices);
+    int out_j = 0;
+    for (int i = 0; i < indices.rows(); ++i) {
+      for (int j = 0; j < indices.cols(); ++j) {
+        IndexType idx = indices(i, j);
+        if (idx < 0) {
+          idx += cols;  // ONNX allows negative indices counting from the end
+        }
+        if (idx < 0 || idx >= cols) {
+          throw std::invalid_argument("gather: index out of bounds");
+        }
+        result.col(out_j++) = data.col(static_cast<int>(idx));
+      }
+    }
+    return result;
   }
-  return result;
 }
 
 #endif  // GATHER_H

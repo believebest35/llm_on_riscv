@@ -11,8 +11,8 @@
 #include "core/reshape.h"
 #include "core/rotary_embedding.h"
 #include "core/sigmoid.h"
-#include "core/simplified_layernorm.h"
-#include "core/skip_simplified_layernorm.h"
+#include "core/simplified_layer_normalization.h"
+#include "core/skip_simplified_layer_normalization.h"
 
 namespace llm_on_riscv {
 namespace llm {
@@ -74,9 +74,9 @@ Eigen::MatrixXf Qwen3Model::forward(
           residual, mlp_down, layer.input_norm, Qwen3Config::kEpsilon);
     }
 
-    Eigen::MatrixXf query = matrix_multiply(attn_input, layer.q_proj);
-    Eigen::MatrixXf key = matrix_multiply(attn_input, layer.k_proj);
-    Eigen::MatrixXf value = matrix_multiply(attn_input, layer.v_proj);
+    Eigen::MatrixXf query = matmul(attn_input, layer.q_proj);
+    Eigen::MatrixXf key = matmul(attn_input, layer.k_proj);
+    Eigen::MatrixXf value = matmul(attn_input, layer.v_proj);
 
     // Per-head RMSNorm on q/k, then back to the flat hidden layout.
     query = reshape(query, sequence * Qwen3Config::kQueryHeads, Qwen3Config::kHeadDim);
@@ -106,14 +106,14 @@ Eigen::MatrixXf Qwen3Model::forward(
     caches_[layer_index].value = present_value;
 
     Eigen::MatrixXf attention_output =
-        matrix_multiply(attention, layer.o_proj);
+        matmul(attention, layer.o_proj);
     std::tie(mlp_input, residual) = skip_simplified_layer_normalization(
         residual, attention_output, layer.post_norm, Qwen3Config::kEpsilon);
 
-    Eigen::MatrixXf gate = matrix_multiply(mlp_input, layer.gate_proj);
-    Eigen::MatrixXf up = matrix_multiply(mlp_input, layer.up_proj);
-    Eigen::MatrixXf silu = matrix_multiply_elementwise(gate, sigmoid(gate));
-    mlp_down = matrix_multiply(matrix_multiply_elementwise(silu, up), layer.down_proj);
+    Eigen::MatrixXf gate = matmul(mlp_input, layer.gate_proj);
+    Eigen::MatrixXf up = matmul(mlp_input, layer.up_proj);
+    Eigen::MatrixXf silu = mul(gate, sigmoid(gate));
+    mlp_down = matmul(mul(silu, up), layer.down_proj);
   }
 
   Eigen::MatrixXf final_output;

@@ -1,14 +1,35 @@
-#include <gtest/gtest.h>
-
 #include <cstdint>
-#include <string>
-#include <tuple>
-#include <vector>
 
 #include "core/shape.h"
 #include "gtest_base.h"
 
-class ShapeTest : public GTestBase {};
+class ShapeTest : public GTestBase {
+ protected:
+  template <typename Scalar>
+  Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic>
+  golden_reference_shape(
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A) {
+    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> result(2, 1);
+    result(0, 0) = A.rows();
+    result(1, 0) = A.cols();
+    return result;
+  }
+
+  template <typename Scalar>
+  void test_with_golden(
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
+      const std::string& test_description = "") {
+    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> impl_result;
+    ASSERT_NO_THROW(impl_result = shape(A))
+        << "Implementation failed: " << test_description;
+
+    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> golden_result;
+    ASSERT_NO_THROW(golden_result = golden_reference_shape(A))
+        << "Golden reference failed: " << test_description;
+
+    expect_matrix_near(impl_result, golden_result, 0.0, test_description);
+  }
+};
 
 TEST_F(ShapeTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
@@ -20,14 +41,9 @@ TEST_F(ShapeTest, ValidInputs) {
   for (const auto& [rows, cols] : test_cases) {
     auto A = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
 
-    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> result;
-    ASSERT_NO_THROW(result = shape(A))
-        << "Shape " << rows << "x" << cols;
+    std::string test_name = "Shape " + std::to_string(rows) + "x" +
+                            std::to_string(cols);
 
-    EXPECT_EQ(result.rows(), 2) << "Shape " << rows << "x" << cols;
-    EXPECT_EQ(result.cols(), 1) << "Shape " << rows << "x" << cols;
-    EXPECT_EQ(result(0, 0), rows) << "Shape " << rows << "x" << cols;
-    EXPECT_EQ(result(1, 0), cols) << "Shape " << rows << "x" << cols;
+    test_with_golden(A, test_name);
   }
 }
-

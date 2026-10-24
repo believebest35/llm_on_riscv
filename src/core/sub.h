@@ -14,15 +14,16 @@
  * @tparam Scalar Data type (float, double, etc.)
  * @param A Left matrix (m x n)
  * @param B Right matrix (m x n), broadcastable to A
- * @return C Result matrix containing A - B.
+ * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Result matrix
+ *         containing A - B.
  */
 
 template <typename Scalar>
-Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> matrix_subtract_elementwise(
+Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> sub(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
-  const Eigen::Index rows = std::max(A.rows(), B.rows());
-  const Eigen::Index cols = std::max(A.cols(), B.cols());
+  const int rows = static_cast<int>(std::max(A.rows(), B.rows()));
+  const int cols = static_cast<int>(std::max(A.cols(), B.cols()));
   const bool a_broadcastable =
       (A.rows() == rows || A.rows() == 1) &&
       (A.cols() == cols || A.cols() == 1);
@@ -39,12 +40,12 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> matrix_subtract_elementwis
   }
 
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C(rows, cols);
-  for (Eigen::Index i = 0; i < rows; ++i) {
-    for (Eigen::Index j = 0; j < cols; ++j) {
-      const Eigen::Index ai = (A.rows() == 1) ? 0 : i;
-      const Eigen::Index aj = (A.cols() == 1) ? 0 : j;
-      const Eigen::Index bi = (B.rows() == 1) ? 0 : i;
-      const Eigen::Index bj = (B.cols() == 1) ? 0 : j;
+  for (int i = 0; i < rows; ++i) {
+    for (int j = 0; j < cols; ++j) {
+      const int ai = (A.rows() == 1) ? 0 : i;
+      const int aj = (A.cols() == 1) ? 0 : j;
+      const int bi = (B.rows() == 1) ? 0 : i;
+      const int bj = (B.cols() == 1) ? 0 : j;
       C(i, j) = A(ai, aj) - B(bi, bj);
     }
   }

@@ -1,8 +1,3 @@
-#include <gtest/gtest.h>
-
-#include <string>
-#include <vector>
-
 #include "core/reshape.h"
 #include "gtest_base.h"
 
@@ -53,7 +48,7 @@ TEST_F(ReshapeTest, ValidInputs) {
       {64, 128, 4, 2048}, {32, 128, 4, 1024},
   };
 
-  const float tolerance = 1e-5;
+  const float tolerance = 0.0f;
 
   for (const auto& [rows, cols, new_rows, new_cols] : test_cases) {
     auto A = generate_random_matrix<float>(rows, cols, -5.0f, 5.0f);
@@ -66,7 +61,6 @@ TEST_F(ReshapeTest, ValidInputs) {
     test_with_golden(A, new_rows, new_cols, tolerance, test_name);
   }
 }
-
 
 TEST_F(ReshapeTest, InvalidInputs) {
   auto A = generate_random_matrix<float>(2, 3);

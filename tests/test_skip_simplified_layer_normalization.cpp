@@ -1,19 +1,12 @@
-#include <gtest/gtest.h>
-
-#include <cmath>
-#include <string>
-#include <tuple>
-#include <vector>
-
-#include "core/skip_simplified_layernorm.h"
+#include "core/skip_simplified_layer_normalization.h"
 #include "gtest_base.h"
 
-class SkipSimplifiedLayerNormTest : public GTestBase {
+class SkipSimplifiedLayerNormalizationTest : public GTestBase {
  protected:
   template <typename Scalar>
   std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
              Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>>
-  golden_reference_skip_simplified_layernorm(
+  golden_reference_skip_simplified_layer_normalization(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& skip,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& gamma, Scalar epsilon) {
@@ -51,7 +44,7 @@ class SkipSimplifiedLayerNormTest : public GTestBase {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_sum;
     ASSERT_NO_THROW(std::tie(golden_result, golden_sum) =
-                        golden_reference_skip_simplified_layernorm(
+                        golden_reference_skip_simplified_layer_normalization(
                             X, skip, gamma, epsilon))
         << "Golden reference failed: " << test_description;
 
@@ -62,7 +55,7 @@ class SkipSimplifiedLayerNormTest : public GTestBase {
   }
 };
 
-TEST_F(SkipSimplifiedLayerNormTest, ValidInputs) {
+TEST_F(SkipSimplifiedLayerNormalizationTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
       {1, 1}, {2, 3}, {4, 8}, {64, 128}, {128, 256}, {256, 512}, {1024, 128},
       // docs/01_dev.md (Qwen3-0.6B) shapes.
@@ -70,7 +63,7 @@ TEST_F(SkipSimplifiedLayerNormTest, ValidInputs) {
   };
 
   const float epsilon = 1e-5f;
-  const float tolerance = 1e-4f;
+  const float tolerance = 0.0f;
 
   for (const auto& [rows, cols] : test_cases) {
     auto X = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
@@ -78,15 +71,14 @@ TEST_F(SkipSimplifiedLayerNormTest, ValidInputs) {
     auto gamma = generate_random_vector<float>(cols, 0.5f, 1.5f);
 
     std::string test_name =
-        "SkipSimplifiedLayerNorm " + std::to_string(rows) + "x" +
+        "SkipSimplifiedLayerNormalization " + std::to_string(rows) + "x" +
         std::to_string(cols);
 
     test_with_golden(X, skip, gamma, epsilon, tolerance, test_name);
   }
 }
 
-
-TEST_F(SkipSimplifiedLayerNormTest, InvalidInputs) {
+TEST_F(SkipSimplifiedLayerNormalizationTest, InvalidInputs) {
   auto X = generate_random_matrix<float>(4, 8);
   auto gamma = generate_random_vector<float>(8);
 

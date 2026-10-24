@@ -1,7 +1,3 @@
-#include <gtest/gtest.h>
-
-#include <string>
-
 #include "core/cast.h"
 #include "gtest_base.h"
 
@@ -11,8 +7,10 @@ class CastTest : public GTestBase {
   Eigen::Matrix<Out, Eigen::Dynamic, Eigen::Dynamic> golden_reference_cast(
       const Eigen::Matrix<In, Eigen::Dynamic, Eigen::Dynamic>& A) {
     Eigen::Matrix<Out, Eigen::Dynamic, Eigen::Dynamic> B(A.rows(), A.cols());
-    for (int i = 0; i < A.size(); ++i) {
-      B.data()[i] = static_cast<Out>(A.data()[i]);
+    for (int i = 0; i < A.rows(); ++i) {
+      for (int j = 0; j < A.cols(); ++j) {
+        B(i, j) = static_cast<Out>(A(i, j));
+      }
     }
     return B;
   }
@@ -22,7 +20,7 @@ class CastTest : public GTestBase {
       const Eigen::Matrix<In, Eigen::Dynamic, Eigen::Dynamic>& A,
       double tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Out, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW((impl_result = cast_matrix<Out, In>(A)))
+    ASSERT_NO_THROW((impl_result = cast<Out, In>(A)))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Out, Eigen::Dynamic, Eigen::Dynamic> golden_result;
@@ -35,34 +33,21 @@ class CastTest : public GTestBase {
 
 TEST_F(CastTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
-      {1, 1}, {1, 1024}, {1024, 1}, {2, 3}, {64, 64}, {256, 256}, {1024, 1024},
+      {1, 1024}, {1024, 1}, {2, 3}, {64, 64}, {256, 256}, {1024, 1024},
+      // docs/01_dev.md (Qwen3-0.6B) shapes: scalar () and (batch, 1).
+      {1, 1},
   };
 
-  const double tolerance = 1e-5;
+  const double tolerance = 0.0;
 
   for (const auto& [rows, cols] : test_cases) {
     auto A = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
 
-    std::string test_name = "Cast float->float " + std::to_string(rows) + "x" +
-                            std::to_string(cols);
+    const std::string shape =
+        std::to_string(rows) + "x" + std::to_string(cols);
 
-    test_with_golden<float, float>(A, tolerance, test_name);
-  }
-
-  // Hand-picked cases: non-random values / alternative
-  // argument forms, checked against the same reference.
-  {
-    const auto A = generate_random_matrix<float>(4, 8, -2.0f, 2.0f);
-
-    const auto as_int = cast_matrix<int, float>(A);
-    EXPECT_EQ(as_int.rows(), A.rows());
-    EXPECT_EQ(as_int.cols(), A.cols());
-    for (int i = 0; i < A.size(); ++i) {
-      EXPECT_EQ(as_int.data()[i], static_cast<int>(A.data()[i]));
-    }
-
-    test_with_golden<double, float>(A, 1e-6, "Cast float->double");
+    test_with_golden<float, float>(A, tolerance, "Cast float->float " + shape);
+    test_with_golden<double, float>(A, tolerance, "Cast float->double " + shape);
+    test_with_golden<int, float>(A, tolerance, "Cast float->int " + shape);
   }
 }
-
-

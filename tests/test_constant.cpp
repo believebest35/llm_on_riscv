@@ -1,7 +1,3 @@
-#include <gtest/gtest.h>
-
-#include <string>
-
 #include "core/constant.h"
 #include "gtest_base.h"
 
@@ -19,7 +15,7 @@ class ConstantTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& value,
       Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result = constant_matrix<Scalar>(value))
+    ASSERT_NO_THROW(impl_result = constant<Scalar>(value))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
@@ -37,7 +33,7 @@ TEST_F(ConstantTest, ValidInputs) {
       {4, 1024},
   };
 
-  const float tolerance = 1e-5;
+  const float tolerance = 0.0f;
 
   for (const auto& [rows, cols] : test_cases) {
     auto value = generate_random_matrix<float>(rows, cols, -1.0, 1.0);
