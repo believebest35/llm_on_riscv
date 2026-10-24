@@ -11,13 +11,13 @@ huggingface-cli download onnx-community/Qwen3-0.6B-ONNX --local-dir Qwen3-0.6B-O
 2. profile model
 
 ```sh
-python scripts/summary_op.py <your onnx path>
+python scripts/export_op_profile.py <your onnx path>
 ```
 
 ```
 === Basic Model Information ===
 IR version       : 7
-Opset versions   : [14, 1]
+Opset versions   : [('ai.onnx', 14), ('com.microsoft', 1)]
 Number of nodes  : 610
 Graph inputs     : 59
 Graph outputs    : 57
@@ -34,9 +34,15 @@ Total nodes: 2
 
 === OpType: Constant ===
 Total nodes: 7
-  Count: 7
+  Count: 1
     Inputs : ()
     Outputs: ((),)
+  Count: 3
+    Inputs : ()
+    Outputs: ((1,),)
+  Count: 3
+    Inputs : ()
+    Outputs: ((3,),)
 
 === OpType: Gather ===
 Total nodes: 3
@@ -51,12 +57,12 @@ Total nodes: 3
 Total nodes: 1
   Count: 1
     Inputs : ((151936, 1024),)
-    Outputs: (None,)
+    Outputs: ((1024, 151936),)
 
 === OpType: ReduceSum ===
 Total nodes: 1
   Count: 1
-    Inputs : (('batch_size', 'total_sequence_length'), ())
+    Inputs : (('batch_size', 'total_sequence_length'), (1,))
     Outputs: (('batch_size', 1),)
 
 === OpType: SimplifiedLayerNormalization ===
@@ -74,13 +80,13 @@ Total nodes: 57
 === OpType: Unsqueeze ===
 Total nodes: 1
   Count: 1
-    Inputs : ((), ())
+    Inputs : ((), (1,))
     Outputs: ((1,),)
 
 === OpType: Sub ===
 Total nodes: 1
   Count: 1
-    Inputs : (('batch_size', 1), ())
+    Inputs : (('batch_size', 1), (1,))
     Outputs: (('batch_size', 1),)
 
 === OpType: Cast ===
@@ -110,40 +116,40 @@ Total nodes: 197
     Inputs : (('batch_size', 'sequence_length', 3072), (3072, 1024))
     Outputs: (('batch_size', 'sequence_length', 1024),)
   Count: 1
-    Inputs : (('batch_size', 'sequence_length', 1024), None)
+    Inputs : (('batch_size', 'sequence_length', 1024), (1024, 151936))
     Outputs: (('batch_size', 'sequence_length', 151936),)
 
 === OpType: Concat ===
 Total nodes: 1
   Count: 1
-    Inputs : ((), (1,))
+    Inputs : ((1,), (1,))
     Outputs: ((2,),)
 
 === OpType: Reshape ===
 Total nodes: 113
   Count: 28
-    Inputs : (('batch_size', 'sequence_length', 2048), ())
+    Inputs : (('batch_size', 'sequence_length', 2048), (3,))
     Outputs: (('batch_size', 'sequence_length * num_attention_heads', 128),)
   Count: 28
-    Inputs : (('batch_size', 'sequence_length', 1024), ())
+    Inputs : (('batch_size', 'sequence_length', 1024), (3,))
     Outputs: (('batch_size', 'sequence_length * num_key_value_heads', 128),)
   Count: 1
     Inputs : (('batch_size', 'sequence_length'), (2,))
-    Outputs: ((),)
+    Outputs: (('unk__0', 'unk__1'),)
   Count: 28
-    Inputs : (('batch_size', 'sequence_length * num_attention_heads', 128), ())
+    Inputs : (('batch_size', 'sequence_length * num_attention_heads', 128), (3,))
     Outputs: (('batch_size', 'sequence_length', 2048),)
   Count: 28
-    Inputs : (('batch_size', 'sequence_length * num_key_value_heads', 128), ())
+    Inputs : (('batch_size', 'sequence_length * num_key_value_heads', 128), (3,))
     Outputs: (('batch_size', 'sequence_length', 1024),)
 
 === OpType: RotaryEmbedding ===
 Total nodes: 56
   Count: 28
-    Inputs : (('batch_size', 'sequence_length', 2048), (), (40960, 64), (40960, 64))
+    Inputs : (('batch_size', 'sequence_length', 2048), ('unk__0', 'unk__1'), (40960, 64), (40960, 64))
     Outputs: (('batch_size', 'sequence_length', 2048),)
   Count: 28
-    Inputs : (('batch_size', 'sequence_length', 1024), (), (40960, 64), (40960, 64))
+    Inputs : (('batch_size', 'sequence_length', 1024), ('unk__0', 'unk__1'), (40960, 64), (40960, 64))
     Outputs: (('batch_size', 'sequence_length', 1024),)
 
 === OpType: GroupQueryAttention ===
