@@ -36,15 +36,15 @@ class SubTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B,
       Scalar tolerance, const std::string& test_description = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C;
-    ASSERT_NO_THROW(C = sub(A, B))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
+    ASSERT_NO_THROW(impl_result = sub(A, B))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
     ASSERT_NO_THROW(golden_result = golden_reference_sub(A, B))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(C, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 

@@ -5,23 +5,6 @@
 #include <stdexcept>
 
 /**
- * @brief Llama-style rotate_half on the last dimension: [x1, x2] -> [-x2, x1].
- *
- * @tparam Scalar Element type of the row.
- * @param x Input row of even length.
- * @param out Output row of the same length.
- */
-template <typename Scalar>
-void rotary_rotate_half_row(
-    const Eigen::Ref<const Eigen::Matrix<Scalar, 1, Eigen::Dynamic>>& x,
-    Eigen::Ref<Eigen::Matrix<Scalar, 1, Eigen::Dynamic>> out) {
-  const int d = static_cast<int>(x.size());
-  const int h = d / 2;
-  out.head(h) = -x.tail(h);
-  out.tail(h) = x.head(h);
-}
-
-/**
  * @brief Apply rotary positional embeddings with a precomputed cos/sin cache.
  *
  * Batch size is fixed to 1, so the input is (sequence_length, hidden_dim).
@@ -88,8 +71,10 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> rotary_embedding(
 
     for (int h = 0; h < num_heads; ++h) {
       const int off = h * head_dim;
-      auto x = input.row(r).segment(off, head_dim);
-      rotary_rotate_half_row<Scalar>(x, rh);
+      const auto x = input.row(r).segment(off, head_dim);
+      // rotate_half: [x1, x2] -> [-x2, x1]
+      rh.head(rope_dim) = -x.tail(rope_dim);
+      rh.tail(rope_dim) = x.head(rope_dim);
       output.row(r).segment(off, head_dim).array() =
           x.array() * cos_full.array() + rh.array() * sin_full.array();
     }

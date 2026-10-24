@@ -44,23 +44,29 @@ group_query_attention(
   constexpr int kHeadDim = 128;
 
   if (query.rows() != key.rows() || query.rows() != value.rows()) {
-    throw std::invalid_argument("query/key/value must share sequence length");
+    throw std::invalid_argument(
+        "group_query_attention: query/key/value must share sequence length");
   }
   if (query.cols() != kNumQueryHeads * kHeadDim) {
-    throw std::invalid_argument("query hidden size must be 2048");
+    throw std::invalid_argument(
+        "group_query_attention: query hidden size must be 2048");
   }
   if (key.cols() != kNumKeyValueHeads * kHeadDim ||
       value.cols() != kNumKeyValueHeads * kHeadDim) {
-    throw std::invalid_argument("key/value hidden size must be 1024");
+    throw std::invalid_argument(
+        "group_query_attention: key/value hidden size must be 1024");
   }
   if (past_key.cols() != kHeadDim || past_value.cols() != kHeadDim) {
-    throw std::invalid_argument("past key/value second dimension must be 128");
+    throw std::invalid_argument(
+        "group_query_attention: past key/value second dimension must be 128");
   }
   if (past_key.rows() != past_value.rows()) {
-    throw std::invalid_argument("past key/value rows must match");
+    throw std::invalid_argument(
+        "group_query_attention: past key/value rows must match");
   }
   if (past_key.rows() % kNumKeyValueHeads != 0) {
-    throw std::invalid_argument("past key/value rows must be divisible by 8");
+    throw std::invalid_argument(
+        "group_query_attention: past key/value rows must be divisible by 8");
   }
 
   const int sequence = query.rows();
@@ -68,11 +74,12 @@ group_query_attention(
 
   if (total_sequence_length != past_sequence + sequence) {
     throw std::invalid_argument(
-        "total_sequence_length must equal "
+        "group_query_attention: total_sequence_length must equal "
         "past_sequence_length + sequence_length");
   }
   if (seqlens_k < 0 || seqlens_k >= total_sequence_length) {
-    throw std::invalid_argument("seqlens_k must be a valid KV index");
+    throw std::invalid_argument(
+        "group_query_attention: seqlens_k must be a valid KV index");
   }
 
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_key(

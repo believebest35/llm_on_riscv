@@ -6,7 +6,8 @@ class UnsqueezeTest : public GTestBase {
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
   golden_reference_unsqueeze(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& data, int axes) {
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,
+      int axes) {
     const int N = static_cast<int>(data.size());
     if (axes == 0) {
       Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> expanded(1, N);
@@ -31,14 +32,15 @@ class UnsqueezeTest : public GTestBase {
 
   template <typename Scalar>
   void test_with_golden(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& data, int axes,
-      Scalar tolerance, const std::string& test_description = "") {
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,
+      int axes, Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
     ASSERT_NO_THROW(impl_result = unsqueeze<Scalar>(data, axes))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_unsqueeze<Scalar>(data, axes))
+    ASSERT_NO_THROW(
+        golden_result = golden_reference_unsqueeze<Scalar>(data, axes))
         << "Golden reference failed: " << test_description;
 
     expect_matrix_near(impl_result, golden_result, tolerance, test_description);
@@ -60,7 +62,7 @@ TEST_F(UnsqueezeTest, ValidInputs) {
     std::string test_name = "Unsqueeze size=" + std::to_string(size) +
                             " axes=" + std::to_string(axes);
 
-    test_with_golden(data, axes, tolerance, test_name);
+    test_with_golden<float>(data, axes, tolerance, test_name);
   }
 }
 

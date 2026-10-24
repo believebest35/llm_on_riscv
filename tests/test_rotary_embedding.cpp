@@ -59,27 +59,22 @@ class RotaryEmbeddingTest : public GTestBase {
 
     expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
-};
 
-namespace {
-
-// Build a genuine RoPE table for positions [0, rows) so that
-// cos^2 + sin^2 == 1 and the transform is a pure rotation.
-void fill_rope_table(Eigen::MatrixXf& cos_cache, Eigen::MatrixXf& sin_cache,
-                     int cache_rows, int rows, int rope_dim, int head_dim) {
-  cos_cache = Eigen::MatrixXf::Zero(cache_rows, rope_dim);
-  sin_cache = Eigen::MatrixXf::Zero(cache_rows, rope_dim);
-  for (int p = 0; p < rows; ++p) {
-    for (int d = 0; d < rope_dim; ++d) {
-      const float freq = std::pow(10000.0f, -2.0f * d / head_dim);
-      cos_cache(p, d) = std::cos(static_cast<float>(p) * freq);
-      sin_cache(p, d) = std::sin(static_cast<float>(p) * freq);
+  // Build a genuine RoPE table for positions [0, rows) so that
+  // cos^2 + sin^2 == 1 and the transform is a pure rotation.
+  void fill_rope_table(Eigen::MatrixXf& cos_cache, Eigen::MatrixXf& sin_cache,
+                       int cache_rows, int rows, int rope_dim, int head_dim) {
+    cos_cache = Eigen::MatrixXf::Zero(cache_rows, rope_dim);
+    sin_cache = Eigen::MatrixXf::Zero(cache_rows, rope_dim);
+    for (int p = 0; p < rows; ++p) {
+      for (int d = 0; d < rope_dim; ++d) {
+        const float freq = std::pow(10000.0f, -2.0f * d / head_dim);
+        cos_cache(p, d) = std::cos(static_cast<float>(p) * freq);
+        sin_cache(p, d) = std::sin(static_cast<float>(p) * freq);
+      }
     }
   }
-}
-
-}  // namespace
-
+};
 
 TEST_F(RotaryEmbeddingTest, ValidInputs) {
   const std::vector<std::tuple<int, int, int, int, int>> test_cases = {

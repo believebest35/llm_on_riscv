@@ -19,9 +19,8 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> mul(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
   if (A.rows() != B.rows() || A.cols() != B.cols()) {
     throw std::invalid_argument(
-        "Matrix dimensions incompatible for element-wise multiplication: "
-        "A.rows() = " +
-        std::to_string(A.rows()) + ", A.cols() = " + std::to_string(A.cols()) +
+        "mul: A.rows() = " + std::to_string(A.rows()) +
+        ", A.cols() = " + std::to_string(A.cols()) +
         ", B.rows() = " + std::to_string(B.rows()) +
         ", B.cols() = " + std::to_string(B.cols()));
   }

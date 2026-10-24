@@ -16,7 +16,6 @@
  * @return Eigen::Matrix<OutScalar, Eigen::Dynamic, Eigen::Dynamic> Matrix of
  *         identical shape with elements converted to OutScalar.
  */
-
 template <typename OutScalar, typename InScalar>
 Eigen::Matrix<OutScalar, Eigen::Dynamic, Eigen::Dynamic> cast(
     const Eigen::Matrix<InScalar, Eigen::Dynamic, Eigen::Dynamic>& A) {

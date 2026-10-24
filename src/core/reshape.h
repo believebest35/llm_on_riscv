@@ -15,7 +15,6 @@
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Reshaped
  *         matrix (new_rows x new_cols), read/written in row-major order.
  */
-
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reshape(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,

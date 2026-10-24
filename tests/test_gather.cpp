@@ -9,6 +9,9 @@ class GatherTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,
       const Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>& indices,
       int axis) {
+    if (axis < 0) {
+      axis += 2;  // 2-D data: -1 -> 1, -2 -> 0
+    }
     const int rows = data.rows();
     const int cols = data.cols();
     const int num_indices = static_cast<int>(indices.size());
@@ -72,8 +75,10 @@ class GatherTest : public GTestBase {
 
 TEST_F(GatherTest, ValidInputs) {
   const std::vector<std::tuple<int, int, int, int>> test_cases = {
-      {10, 20, 5, 0}, {10, 20, 5, 1}, {5, 5, 10, 0},
-      {5, 5, 10, 1},  {64, 128, 32, 0}, {64, 128, 32, 1},
+      {10, 20, 5, 0},  {10, 20, 5, 1},   {5, 5, 10, 0},
+      {5, 5, 10, 1},   {64, 128, 32, 0}, {64, 128, 32, 1},
+      // Negative axes count from the back: -2 -> 0, -1 -> 1.
+      {10, 20, 5, -2}, {10, 20, 5, -1},
       // docs/01_dev.md (Qwen3-0.6B) shapes.
       {151936, 1024, 4, 0}, {2, 1, 1, 0},
   };
@@ -83,7 +88,8 @@ TEST_F(GatherTest, ValidInputs) {
   for (const auto& [rows, cols, num_idx, axis] : test_cases) {
     auto data = generate_random_matrix<float>(rows, cols, -10.0f, 10.0f);
     Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> idx(1, num_idx);
-    int axis_size = (axis == 0) ? rows : cols;
+    const int norm_axis = (axis < 0) ? axis + 2 : axis;
+    int axis_size = (norm_axis == 0) ? rows : cols;
     for (int i = 0; i < num_idx; ++i) {
       // Negative indices count from the end, as allowed by ONNX.
       idx(0, i) = std::rand() % (2 * axis_size) - axis_size;

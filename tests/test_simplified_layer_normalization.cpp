@@ -36,7 +36,9 @@ class SimplifiedLayerNormalizationTest : public GTestBase {
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_simplified_layer_normalization(X, scale, epsilon))
+    ASSERT_NO_THROW(
+        golden_result = golden_reference_simplified_layer_normalization(
+            X, scale, epsilon))
         << "Golden reference failed: " << test_description;
 
     expect_matrix_near(impl_result, golden_result, tolerance, test_description);

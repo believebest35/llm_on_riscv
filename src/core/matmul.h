@@ -19,9 +19,8 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> matmul(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
   if (A.cols() != B.rows()) {
     throw std::invalid_argument(
-        "Matrix dimensions incompatible for multiplication: "
-        "A.cols() = " +
-        std::to_string(A.cols()) + ", B.rows() = " + std::to_string(B.rows()));
+        "matmul: A.cols() = " + std::to_string(A.cols()) +
+        ", B.rows() = " + std::to_string(B.rows()));
   }
 
   return A * B;

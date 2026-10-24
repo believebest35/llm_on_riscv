@@ -16,7 +16,6 @@
  * @return Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic>
  *         Column vector containing [rows, cols].
  */
-
 template <typename Scalar>
 Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> shape(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A) {

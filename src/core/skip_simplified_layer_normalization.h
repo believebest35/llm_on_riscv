@@ -1,5 +1,5 @@
-#ifndef SKIP_SIMPLIFIED_LAYERNORM_H
-#define SKIP_SIMPLIFIED_LAYERNORM_H
+#ifndef SKIP_SIMPLIFIED_LAYER_NORMALIZATION_H
+#define SKIP_SIMPLIFIED_LAYER_NORMALIZATION_H
 
 #include <Eigen/Dense>
 #include <cmath>
@@ -35,12 +35,12 @@ skip_simplified_layer_normalization(
     Scalar epsilon = static_cast<Scalar>(1e-5)) {
   if (X.rows() != skip.rows() || X.cols() != skip.cols()) {
     throw std::invalid_argument(
-        "SkipSimplifiedLayerNormalization dimension mismatch: X and skip must "
-        "have same shape");
+        "skip_simplified_layer_normalization: X and skip must have same "
+        "shape");
   }
   if (X.cols() != gamma.size()) {
     throw std::invalid_argument(
-        "SkipSimplifiedLayerNormalization dimension mismatch: X.cols() = " +
+        "skip_simplified_layer_normalization: X.cols() = " +
         std::to_string(X.cols()) +
         ", gamma.size() = " + std::to_string(gamma.size()));
   }
@@ -61,4 +61,4 @@ skip_simplified_layer_normalization(
   return {Y, input_skip_bias_sum};
 }
 
-#endif  // SKIP_SIMPLIFIED_LAYERNORM_H
+#endif  // SKIP_SIMPLIFIED_LAYER_NORMALIZATION_H

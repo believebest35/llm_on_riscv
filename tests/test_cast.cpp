@@ -38,7 +38,7 @@ TEST_F(CastTest, ValidInputs) {
       {1, 1},
   };
 
-  const double tolerance = 0.0;
+  const float tolerance = 0.0f;
 
   for (const auto& [rows, cols] : test_cases) {
     auto A = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
@@ -47,7 +47,8 @@ TEST_F(CastTest, ValidInputs) {
         std::to_string(rows) + "x" + std::to_string(cols);
 
     test_with_golden<float, float>(A, tolerance, "Cast float->float " + shape);
-    test_with_golden<double, float>(A, tolerance, "Cast float->double " + shape);
+    test_with_golden<double, float>(A, tolerance,
+                                    "Cast float->double " + shape);
     test_with_golden<int, float>(A, tolerance, "Cast float->int " + shape);
   }
 }

@@ -19,7 +19,6 @@
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Resulting
  *         2-D matrix (1xN or Nx1).
  */
-
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> unsqueeze(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,

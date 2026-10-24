@@ -17,7 +17,6 @@
  *         values: (num_indices x cols) for axis 0, (rows x num_indices) for
  *         axis 1.
  */
-
 template <typename Scalar, typename IndexType>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> gather(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,

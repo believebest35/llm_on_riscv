@@ -56,13 +56,13 @@ TEST_F(MatMulTest, ValidInputs) {
       {4, 1024, 3072},   {4, 3072, 1024},  {4, 1024, 151936},
   };
 
-  const float tolerance = 1e-2;
+  const float tolerance = 1e-2f;
 
   for (const auto& [m, n, p] : test_cases) {
-    auto A = generate_random_matrix<float>(m, n, -1.0, 1.0);
-    auto B = generate_random_matrix<float>(n, p, -1.0, 1.0);
+    auto A = generate_random_matrix<float>(m, n, -1.0f, 1.0f);
+    auto B = generate_random_matrix<float>(n, p, -1.0f, 1.0f);
 
-    std::string test_name = "Random matrix " + std::to_string(m) + "x" +
+    std::string test_name = "MatMul " + std::to_string(m) + "x" +
                             std::to_string(n) + " * " + std::to_string(n) +
                             "x" + std::to_string(p);
 

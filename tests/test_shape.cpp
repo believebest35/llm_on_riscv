@@ -18,7 +18,7 @@ class ShapeTest : public GTestBase {
   template <typename Scalar>
   void test_with_golden(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
-      const std::string& test_description = "") {
+      double tolerance, const std::string& test_description = "") {
     Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> impl_result;
     ASSERT_NO_THROW(impl_result = shape(A))
         << "Implementation failed: " << test_description;
@@ -27,7 +27,7 @@ class ShapeTest : public GTestBase {
     ASSERT_NO_THROW(golden_result = golden_reference_shape(A))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(impl_result, golden_result, 0.0, test_description);
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
@@ -38,12 +38,14 @@ TEST_F(ShapeTest, ValidInputs) {
       {1, 4}, {1, 7},
   };
 
+  const float tolerance = 0.0f;
+
   for (const auto& [rows, cols] : test_cases) {
     auto A = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
 
     std::string test_name = "Shape " + std::to_string(rows) + "x" +
                             std::to_string(cols);
 
-    test_with_golden(A, test_name);
+    test_with_golden(A, tolerance, test_name);
   }
 }

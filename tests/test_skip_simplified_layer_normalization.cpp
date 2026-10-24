@@ -11,7 +11,8 @@ class SkipSimplifiedLayerNormalizationTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& skip,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& gamma, Scalar epsilon) {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y(X.rows(), X.cols());
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> sum(X.rows(), X.cols());
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> sum(X.rows(),
+                                                             X.cols());
     for (int i = 0; i < X.rows(); ++i) {
       Scalar sum_sq = static_cast<Scalar>(0);
       for (int j = 0; j < X.cols(); ++j) {
@@ -88,7 +89,7 @@ TEST_F(SkipSimplifiedLayerNormalizationTest, InvalidInputs) {
       std::invalid_argument);
   EXPECT_THROW(
       skip_simplified_layer_normalization(
-          X, generate_random_matrix<float>(4, 8), generate_random_vector<float>(7),
-          1e-5f),
+          X, generate_random_matrix<float>(4, 8),
+          generate_random_vector<float>(7), 1e-5f),
       std::invalid_argument);
 }

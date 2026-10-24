@@ -14,7 +14,6 @@
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Output matrix
  * of the same shape with sigmoid applied element-wise.
  */
-
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> sigmoid(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X) {

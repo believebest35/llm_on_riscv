@@ -14,7 +14,6 @@
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Result of
  *         concatenation.
  */
-
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> concat(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,

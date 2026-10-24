@@ -17,7 +17,6 @@
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Result matrix
  *         containing A - B.
  */
-
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> sub(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
@@ -32,9 +31,8 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> sub(
       (B.cols() == cols || B.cols() == 1);
   if (!a_broadcastable || !b_broadcastable) {
     throw std::invalid_argument(
-        "Matrix dimensions incompatible for element-wise subtraction: "
-        "A.rows() = " +
-        std::to_string(A.rows()) + ", A.cols() = " + std::to_string(A.cols()) +
+        "sub: A.rows() = " + std::to_string(A.rows()) +
+        ", A.cols() = " + std::to_string(A.cols()) +
         ", B.rows() = " + std::to_string(B.rows()) +
         ", B.cols() = " + std::to_string(B.cols()));
   }
