@@ -16,7 +16,6 @@
  *         tensor: axis 0 only -> (1 x cols); axis 1 only -> (rows x 1);
  *         both axes -> (1 x 1) scalar block with the total sum.
  */
-
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduce_sum(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,
@@ -44,24 +43,22 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduce_sum(
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(1, 1);
     reduced(0, 0) = data.sum();
     return reduced;
-  }
-
-  if (*unique_axes.begin() == 0) {
+  } else if (*unique_axes.begin() == 0) {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(1, cols);
     reduced.setZero();
     for (int i = 0; i < rows; ++i) {
       reduced += data.row(i);
     }
     return reduced;
+  } else {
+    // axis 1 only
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(rows, 1);
+    reduced.setZero();
+    for (int i = 0; i < rows; ++i) {
+      reduced(i, 0) = data.row(i).sum();
+    }
+    return reduced;
   }
-
-  // axis 1 only
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(rows, 1);
-  reduced.setZero();
-  for (int i = 0; i < rows; ++i) {
-    reduced(i, 0) = data.row(i).sum();
-  }
-  return reduced;
 }
 
 #endif  // REDUCE_SUM_H

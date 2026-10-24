@@ -39,6 +39,17 @@ def main():
     )
     parser.add_argument("--max-new", type=int, default=8)
     parser.add_argument(
+        "--provider",
+        default="CPUExecutionProvider",
+        help="ONNX Runtime execution provider",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Print model inputs and outputs",
+    )
+    parser.add_argument(
         "-o",
         "--output-dir",
         default="models/qwen3_0.6b/golden",
@@ -52,9 +63,14 @@ def main():
     input_ids = np.array([prompt_ids], dtype=np.int64)
     sequence = input_ids.shape[1]
 
-    session = ort.InferenceSession(
-        args.model_path, providers=["CPUExecutionProvider"]
-    )
+    session = ort.InferenceSession(args.model_path, providers=[args.provider])
+    if args.verbose:
+        print("Model inputs:")
+        for input_meta in session.get_inputs():
+            print(f"  {input_meta.name}: {input_meta.shape}, {input_meta.type}")
+        print("Model outputs:")
+        for output_meta in session.get_outputs():
+            print(f"  {output_meta.name}: {output_meta.shape}, {output_meta.type}")
     output_names = [output.name for output in session.get_outputs()]
 
     feed = {

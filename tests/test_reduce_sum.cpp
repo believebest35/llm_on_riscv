@@ -1,8 +1,4 @@
-#include <gtest/gtest.h>
-
 #include <set>
-#include <string>
-#include <vector>
 
 #include "core/reduce_sum.h"
 #include "gtest_base.h"
@@ -27,25 +23,35 @@ class ReduceSumTest : public GTestBase {
 
     if (unique_axes.size() == 2) {
       Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(1, 1);
-      reduced(0, 0) = data.sum();
-      return reduced;
-    }
-
-    if (*unique_axes.begin() == 0) {
-      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(1, cols);
-      reduced.setZero();
+      double total = 0.0;
       for (int i = 0; i < rows; ++i) {
-        reduced += data.row(i);
+        for (int j = 0; j < cols; ++j) {
+          total += static_cast<double>(data(i, j));
+        }
+      }
+      reduced(0, 0) = static_cast<Scalar>(total);
+      return reduced;
+    } else if (*unique_axes.begin() == 0) {
+      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(1, cols);
+      for (int j = 0; j < cols; ++j) {
+        double total = 0.0;
+        for (int i = 0; i < rows; ++i) {
+          total += static_cast<double>(data(i, j));
+        }
+        reduced(0, j) = static_cast<Scalar>(total);
+      }
+      return reduced;
+    } else {
+      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(rows, 1);
+      for (int i = 0; i < rows; ++i) {
+        double total = 0.0;
+        for (int j = 0; j < cols; ++j) {
+          total += static_cast<double>(data(i, j));
+        }
+        reduced(i, 0) = static_cast<Scalar>(total);
       }
       return reduced;
     }
-
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduced(rows, 1);
-    reduced.setZero();
-    for (int i = 0; i < rows; ++i) {
-      reduced(i, 0) = data.row(i).sum();
-    }
-    return reduced;
   }
 
   template <typename Scalar>
@@ -76,7 +82,8 @@ TEST_F(ReduceSumTest, ValidInputs) {
       {1, 7, {-1}},
   };
 
-  const float tolerance = 1e-5;
+  // Float accumulation over large reductions differs from the exact sum.
+  const float tolerance = 1e-3;
 
   for (const auto& [rows, cols, axes] : test_cases) {
     auto data = generate_random_matrix<float>(rows, cols, -3.0f, 3.0f);
@@ -93,7 +100,6 @@ TEST_F(ReduceSumTest, ValidInputs) {
     test_with_golden(data, axes, tolerance, test_name);
   }
 }
-
 
 TEST_F(ReduceSumTest, InvalidInputs) {
   auto data = generate_random_matrix<float>(2, 3);

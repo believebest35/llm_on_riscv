@@ -15,9 +15,8 @@
  * @return Output tensor, shape:
  *         Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>.
  */
-
 template <typename Scalar>
-Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> constant_matrix(
+Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> constant(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& value) {
   return value;
 }

@@ -1,7 +1,3 @@
-#include <gtest/gtest.h>
-
-#include <string>
-
 #include "core/mul.h"
 #include "gtest_base.h"
 
@@ -35,15 +31,15 @@ class MulTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B,
       Scalar tolerance, const std::string& test_description = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C;
-    ASSERT_NO_THROW(C = matrix_multiply_elementwise(A, B))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
+    ASSERT_NO_THROW(impl_result = mul(A, B))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
     ASSERT_NO_THROW(golden_result = golden_reference_mul(A, B))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(C, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
@@ -55,22 +51,21 @@ TEST_F(MulTest, ValidInputs) {
       {4, 3072},
   };
 
-  const float tolerance = 1e-5;
+  const float tolerance = 0.0f;
 
   for (const auto& [rows, cols] : test_cases) {
-    auto A = generate_random_matrix<float>(rows, cols, -1.0, 1.0);
-    auto B = generate_random_matrix<float>(rows, cols, -1.0, 1.0);
+    auto A = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
+    auto B = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
 
-    std::string test_name = "Random matrix " + std::to_string(rows) + "x" +
+    std::string test_name = "Mul " + std::to_string(rows) + "x" +
                             std::to_string(cols) + " element-wise multiply";
 
     test_with_golden(A, B, tolerance, test_name);
   }
 }
 
-
 TEST_F(MulTest, InvalidInputs) {
   auto A = generate_random_matrix<float>(2, 3);
   auto B = generate_random_matrix<float>(3, 2);
-  EXPECT_THROW(matrix_multiply_elementwise(A, B), std::invalid_argument);
+  EXPECT_THROW(mul(A, B), std::invalid_argument);
 }

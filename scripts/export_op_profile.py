@@ -37,15 +37,14 @@ def build_shape_dict(graph):
     Build a mapping:
         tensor_name -> tensor_shape
 
-    Shape sources (priority order):
-        1. graph.initializer (weights / constants)
-        2. graph.input
-        3. graph.output
-        4. graph.value_info
+    Shape sources:
+        graph.initializer (weights / constants)
+        graph.input / graph.output / graph.value_info
+        Constant node value attributes (override exported value_info)
     """
     shape_dict = {}
 
-    # 1. Initializers (highest priority)
+    # 1. Initializers
     for init in graph.initializer:
         shape_dict[init.name] = get_initializer_shape(init)
 
@@ -55,6 +54,15 @@ def build_shape_dict(graph):
         if shape is not None:
             # Do not override initializer shapes
             shape_dict.setdefault(v.name, shape)
+
+    # 3. Constant nodes: exported value_info may report an empty shape
+    for node in graph.node:
+        if node.op_type != "Constant":
+            continue
+        for attr in node.attribute:
+            if attr.name == "value":
+                shape_dict[node.output[0]] = tuple(attr.t.dims)
+                break
 
     return shape_dict
 
@@ -66,15 +74,21 @@ def analyze_onnx_model(onnx_path):
     - Group nodes by op_type
     - Count input/output shape patterns per op_type
     """
-    model = onnx.load(onnx_path)
+    # Weights are not needed for shape analysis; skip external data loading.
+    model = onnx.load(onnx_path, load_external_data=False)
 
-    # Run shape inference to populate value_info
-    # model = shape_inference.infer_shapes(model)
+    # Run shape inference to fill missing / incorrect value_info.
+    model = shape_inference.infer_shapes(model)
     graph = model.graph
+
+    opset_versions = [
+        (opset.domain or "ai.onnx", opset.version)
+        for opset in model.opset_import
+    ]
 
     print("=== Basic Model Information ===")
     print(f"IR version       : {model.ir_version}")
-    print(f"Opset versions   : {[opset.version for opset in model.opset_import]}")
+    print(f"Opset versions   : {opset_versions}")
     print(f"Number of nodes  : {len(graph.node)}")
     print(f"Graph inputs     : {len(graph.input)}")
     print(f"Graph outputs    : {len(graph.output)}")

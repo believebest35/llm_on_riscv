@@ -4,8 +4,8 @@ set(TEST_TARGETS
     test_hello
     test_matmul
     test_mul
-    test_simplified_layernorm
-    test_skip_simplified_layernorm
+    test_simplified_layer_normalization
+    test_skip_simplified_layer_normalization
     test_add
     test_shape
     test_constant

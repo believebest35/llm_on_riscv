@@ -14,7 +14,6 @@
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Result of
  *         concatenation.
  */
-
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> concat(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
@@ -25,7 +24,7 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> concat(
   }
 
   if (axis == 0) {
-    // stack rows: columns must match
+    // Axis 0 stacks rows, so the column counts must match.
     if (A.cols() != B.cols()) {
       throw std::invalid_argument("concat: column count mismatch");
     }
@@ -34,7 +33,7 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> concat(
     out << A, B;
     return out;
   } else {
-    // axis == 1
+    // Axis 1 appends columns, so the row counts must match.
     if (A.rows() != B.rows()) {
       throw std::invalid_argument("concat: row count mismatch");
     }

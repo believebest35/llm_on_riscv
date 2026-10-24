@@ -15,7 +15,6 @@
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Reshaped
  *         matrix (new_rows x new_cols), read/written in row-major order.
  */
-
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reshape(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
@@ -23,15 +22,17 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reshape(
   if (new_rows < 0 || new_cols < 0) {
     throw std::invalid_argument("reshape: dimensions must be non-negative");
   }
-  const std::int64_t total = A.size();
-  if (static_cast<std::int64_t>(new_rows) * new_cols != total) {
+  const int rows = static_cast<int>(A.rows());
+  const int cols = static_cast<int>(A.cols());
+  const int total = rows * cols;
+  if (new_rows * new_cols != total) {
     throw std::invalid_argument("reshape: total size mismatch");
   }
 
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> out(new_rows, new_cols);
   // ONNX Reshape reads and writes in row-major order.
-  for (std::int64_t i = 0; i < total; ++i) {
-    out(i / new_cols, i % new_cols) = A(i / A.cols(), i % A.cols());
+  for (int i = 0; i < total; ++i) {
+    out(i / new_cols, i % new_cols) = A(i / cols, i % cols);
   }
   return out;
 }

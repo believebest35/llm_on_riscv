@@ -1,5 +1,5 @@
-#ifndef SIMPLIFIED_LAYERNORM_H
-#define SIMPLIFIED_LAYERNORM_H
+#ifndef SIMPLIFIED_LAYER_NORMALIZATION_H
+#define SIMPLIFIED_LAYER_NORMALIZATION_H
 
 #include <Eigen/Dense>
 #include <cmath>
@@ -22,7 +22,6 @@
  * @param epsilon Small positive constant.
  * @return Y Same shape as `X`.
  */
-
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
 simplified_layer_normalization(
@@ -31,8 +30,7 @@ simplified_layer_normalization(
     Scalar epsilon = static_cast<Scalar>(1e-5)) {
   if (X.cols() != scale.size()) {
     throw std::invalid_argument(
-        "SimplifiedLayerNormalization dimension mismatch: "
-        "X.cols() = " +
+        "simplified_layer_normalization: X.cols() = " +
         std::to_string(X.cols()) +
         ", scale.size() = " + std::to_string(scale.size()));
   }
@@ -49,4 +47,4 @@ simplified_layer_normalization(
   return Y;
 }
 
-#endif  // SIMPLIFIED_LAYERNORM_H
+#endif  // SIMPLIFIED_LAYER_NORMALIZATION_H

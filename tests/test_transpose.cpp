@@ -1,7 +1,3 @@
-#include <gtest/gtest.h>
-
-#include <string>
-
 #include "core/transpose.h"
 #include "gtest_base.h"
 
@@ -44,7 +40,7 @@ TEST_F(TransposeTest, ValidInputs) {
       {151936, 1024},
   };
 
-  const float tolerance = 1e-5;
+  const float tolerance = 0.0f;
 
   for (const auto& [rows, cols] : test_cases) {
     auto A = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);

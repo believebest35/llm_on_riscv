@@ -3,3 +3,4 @@ build
 .DS_Store
 Qwen3-0.6B-ONNX
 models/qwen3_0.6b
+__pycache__

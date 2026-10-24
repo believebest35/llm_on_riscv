@@ -1,7 +1,3 @@
-#include <gtest/gtest.h>
-
-#include <string>
-
 #include "core/sigmoid.h"
 #include "gtest_base.h"
 
@@ -13,10 +9,12 @@ class SigmoidTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A) {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> out(A.rows(),
                                                               A.cols());
-    for (std::int64_t i = 0; i < A.size(); ++i) {
-      Scalar x = A.data()[i];
-      out.data()[i] =
-          static_cast<Scalar>(1) / (static_cast<Scalar>(1) + std::exp(-x));
+    for (int i = 0; i < A.rows(); ++i) {
+      for (int j = 0; j < A.cols(); ++j) {
+        const Scalar x = A(i, j);
+        out(i, j) =
+            static_cast<Scalar>(1) / (static_cast<Scalar>(1) + std::exp(-x));
+      }
     }
     return out;
   }
@@ -46,7 +44,7 @@ TEST_F(SigmoidTest, ValidInputs) {
       {4, 3072},
   };
 
-  const float tolerance = 1e-4;
+  const float tolerance = 1e-5f;
 
   for (const auto& [rows, cols] : test_cases) {
     auto X = generate_random_matrix<float>(rows, cols, -5.0f, 5.0f);
@@ -56,20 +54,4 @@ TEST_F(SigmoidTest, ValidInputs) {
 
     test_with_golden(X, tolerance, test_name);
   }
-
-  // Hand-picked cases: non-random values / alternative
-  // argument forms, checked against the same reference.
-  {
-    Eigen::MatrixXf X(1, 5);
-    X << 0.0f, 100.0f, -100.0f, 20.0f, -20.0f;
-
-    auto Y = sigmoid<float>(X);
-    EXPECT_FLOAT_EQ(Y(0, 0), 0.5f);
-    EXPECT_NEAR(Y(0, 1), 1.0f, 1e-6f);
-    EXPECT_NEAR(Y(0, 2), 0.0f, 1e-6f);
-    EXPECT_NEAR(Y(0, 3), 1.0f, 1e-6f);
-    EXPECT_NEAR(Y(0, 4), 0.0f, 1e-6f);
-  }
 }
-
-

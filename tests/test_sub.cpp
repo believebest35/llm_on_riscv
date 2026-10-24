@@ -1,7 +1,4 @@
-#include <gtest/gtest.h>
-
 #include <algorithm>
-#include <string>
 
 #include "core/sub.h"
 #include "gtest_base.h"
@@ -39,60 +36,48 @@ class SubTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B,
       Scalar tolerance, const std::string& test_description = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C;
-    ASSERT_NO_THROW(C = matrix_subtract_elementwise(A, B))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
+    ASSERT_NO_THROW(impl_result = sub(A, B))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
     ASSERT_NO_THROW(golden_result = golden_reference_sub(A, B))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(C, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
   }
 };
 
 TEST_F(SubTest, ValidInputs) {
-  const std::vector<std::tuple<int, int>> test_cases = {
-      {1, 1},     {1, 1024},    {1024, 1},    {2, 3},       {64, 64},
-      {256, 256}, {1024, 1024}, {1024, 2048}, {1024, 3072}, {2048, 1024},
+  const std::vector<std::tuple<int, int, int, int>> test_cases = {
+      {1, 1, 1, 1},             {1, 1024, 1, 1024},
+      {1024, 1, 1024, 1},       {2, 3, 2, 3},
+      {64, 64, 64, 64},         {256, 256, 256, 256},
+      {1024, 1024, 1024, 1024}, {1024, 2048, 1024, 2048},
+      {1024, 3072, 1024, 3072}, {2048, 1024, 2048, 1024},
+      // docs/01_dev.md (Qwen3-0.6B) shapes: (batch, 1) - scalar.
+      {4, 1, 1, 1},
   };
 
-  const float tolerance = 1e-5;
+  const float tolerance = 0.0f;
 
-  for (const auto& [m, n] : test_cases) {
-    auto A = generate_random_matrix<float>(m, n, -1.0, 1.0);
-    auto B = generate_random_matrix<float>(m, n, -1.0, 1.0);
+  for (const auto& [rA, cA, rB, cB] : test_cases) {
+    auto A = generate_random_matrix<float>(rA, cA, -1.0f, 1.0f);
+    auto B = generate_random_matrix<float>(rB, cB, -1.0f, 1.0f);
 
-    std::string test_name = "Random matrix " + std::to_string(m) + "x" +
-                            std::to_string(n) + " subtract";
+    std::string test_name = "Sub " + std::to_string(rA) + "x" +
+                            std::to_string(cA) + " - " + std::to_string(rB) +
+                            "x" + std::to_string(cB);
 
     test_with_golden(A, B, tolerance, test_name);
   }
-
-  // Broadcasting cases used by the Qwen3 graph: (batch, 1) - scalar.
-  {
-    auto A = generate_random_matrix<float>(4, 1);
-    Eigen::MatrixXf scalar(1, 1);
-    scalar << 2.5f;
-    test_with_golden(A, scalar, tolerance, "Sub (4x1) - scalar");
-
-    auto C = generate_random_matrix<float>(4, 3);
-    auto row = generate_random_matrix<float>(1, 3);
-    test_with_golden(C, row, tolerance, "Sub (4x3) - (1x3)");
-
-    auto col = generate_random_matrix<float>(4, 1);
-    test_with_golden(C, col, tolerance, "Sub (4x3) - (4x1)");
-
-    test_with_golden(scalar, C, tolerance, "Sub scalar - (4x3)");
-  }
 }
-
 
 TEST_F(SubTest, InvalidInputs) {
   auto A = generate_random_matrix<float>(2, 3);
   auto B = generate_random_matrix<float>(3, 2);
-  EXPECT_THROW(matrix_subtract_elementwise(A, B), std::invalid_argument);
+  EXPECT_THROW(sub(A, B), std::invalid_argument);
 
   auto C = generate_random_matrix<float>(2, 2);
-  EXPECT_THROW(matrix_subtract_elementwise(A, C), std::invalid_argument);
+  EXPECT_THROW(sub(A, C), std::invalid_argument);
 }

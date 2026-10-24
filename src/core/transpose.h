@@ -15,7 +15,6 @@
  * @return Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Transposed
  *         matrix of size (n x m).
  */
-
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> transpose(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A) {
