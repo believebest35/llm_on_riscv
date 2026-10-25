@@ -1,0 +1,1337 @@
+{
+  "irVersion": "7",
+  "producerName": "onnxruntime-genai",
+  "producerVersion": "0.0.0",
+  "graph": {
+    "node": [
+      {
+        "input": [
+          "/model/layers.0/post_attention_layernorm/output_3",
+          "/model/layers.0/mlp/down_proj/MatMul/output_0",
+          "model.layers.1.input_layernorm.weight"
+        ],
+        "output": [
+          "/model/layers.1/input_layernorm/output_0",
+          "",
+          "",
+          "/model/layers.1/input_layernorm/output_3"
+        ],
+        "name": "/model/layers.1/input_layernorm/SkipLayerNorm",
+        "opType": "SkipSimplifiedLayerNormalization",
+        "attribute": [
+          {
+            "name": "epsilon",
+            "f": 1e-06,
+            "type": "FLOAT"
+          }
+        ],
+        "domain": "com.microsoft"
+      },
+      {
+        "input": [
+          "/model/layers.1/input_layernorm/output_0",
+          "model.layers.1.attn.q_proj.MatMul.weight"
+        ],
+        "output": [
+          "/model/layers.1/attn/q_proj/MatMul/output_0"
+        ],
+        "name": "/model/layers.1/attn/q_proj/MatMul",
+        "opType": "MatMul"
+      },
+      {
+        "input": [
+          "/model/layers.1/input_layernorm/output_0",
+          "model.layers.1.attn.k_proj.MatMul.weight"
+        ],
+        "output": [
+          "/model/layers.1/attn/k_proj/MatMul/output_0"
+        ],
+        "name": "/model/layers.1/attn/k_proj/MatMul",
+        "opType": "MatMul"
+      },
+      {
+        "input": [
+          "/model/layers.1/input_layernorm/output_0",
+          "model.layers.1.attn.v_proj.MatMul.weight"
+        ],
+        "output": [
+          "/model/layers.1/attn/v_proj/MatMul/output_0"
+        ],
+        "name": "/model/layers.1/attn/v_proj/MatMul",
+        "opType": "MatMul"
+      },
+      {
+        "input": [
+          "/model/layers.1/attn/q_proj/MatMul/output_0",
+          "/model/constants/TensorProto.INT64/1D/0, -1, 128"
+        ],
+        "output": [
+          "/model/layers.1/attn/q_norm/Reshape_1/output_0"
+        ],
+        "name": "/model/layers.1/attn/q_norm/Reshape_1",
+        "opType": "Reshape"
+      },
+      {
+        "input": [
+          "/model/layers.1/attn/k_proj/MatMul/output_0",
+          "/model/constants/TensorProto.INT64/1D/0, -1, 128"
+        ],
+        "output": [
+          "/model/layers.1/attn/k_norm/Reshape_1/output_0"
+        ],
+        "name": "/model/layers.1/attn/k_norm/Reshape_1",
+        "opType": "Reshape"
+      },
+      {
+        "input": [
+          "/model/layers.1/attn/q_norm/Reshape_1/output_0",
+          "model.layers.1.attn.q_norm.layernorm.weight"
+        ],
+        "output": [
+          "/model/layers.1/attn/q_norm/SimplifiedLayerNormalization/output_0"
+        ],
+        "name": "/model/layers.1/attn/q_norm/SimplifiedLayerNormalization",
+        "opType": "SimplifiedLayerNormalization",
+        "attribute": [
+          {
+            "name": "epsilon",
+            "f": 1e-06,
+            "type": "FLOAT"
+          },
+          {
+            "name": "axis",
+            "i": "-1",
+            "type": "INT"
+          },
+          {
+            "name": "stash_type",
+            "i": "1",
+            "type": "INT"
+          }
+        ]
+      },
+      {
+        "input": [
+          "/model/layers.1/attn/k_norm/Reshape_1/output_0",
+          "model.layers.1.attn.k_norm.layernorm.weight"
+        ],
+        "output": [
+          "/model/layers.1/attn/k_norm/SimplifiedLayerNormalization/output_0"
+        ],
+        "name": "/model/layers.1/attn/k_norm/SimplifiedLayerNormalization",
+        "opType": "SimplifiedLayerNormalization",
+        "attribute": [
+          {
+            "name": "epsilon",
+            "f": 1e-06,
+            "type": "FLOAT"
+          },
+          {
+            "name": "axis",
+            "i": "-1",
+            "type": "INT"
+          },
+          {
+            "name": "stash_type",
+            "i": "1",
+            "type": "INT"
+          }
+        ]
+      },
+      {
+        "input": [
+          "/model/layers.1/attn/q_norm/SimplifiedLayerNormalization/output_0",
+          "/model/constants/TensorProto.INT64/1D/0, -1, 2048"
+        ],
+        "output": [
+          "/model/layers.1/attn/q_norm/Reshape_2/output_0"
+        ],
+        "name": "/model/layers.1/attn/q_norm/Reshape_2",
+        "opType": "Reshape"
+      },
+      {
+        "input": [
+          "/model/layers.1/attn/k_norm/SimplifiedLayerNormalization/output_0",
+          "/model/constants/TensorProto.INT64/1D/0, -1, 1024"
+        ],
+        "output": [
+          "/model/layers.1/attn/k_norm/Reshape_2/output_0"
+        ],
+        "name": "/model/layers.1/attn/k_norm/Reshape_2",
+        "opType": "Reshape"
+      },
+      {
+        "input": [
+          "/model/layers.1/attn/q_norm/Reshape_2/output_0",
+          "position_ids",
+          "cos_cache",
+          "sin_cache"
+        ],
+        "output": [
+          "/model/layers.1/attn/q_rotary/RotaryEmbedding/output_0"
+        ],
+        "name": "/model/layers.1/attn/q_rotary/RotaryEmbedding",
+        "opType": "RotaryEmbedding",
+        "attribute": [
+          {
+            "name": "interleaved",
+            "i": "0",
+            "type": "INT"
+          },
+          {
+            "name": "num_heads",
+            "i": "0",
+            "type": "INT"
+          },
+          {
+            "name": "rotary_embedding_dim",
+            "i": "0",
+            "type": "INT"
+          }
+        ],
+        "domain": "com.microsoft"
+      },
+      {
+        "input": [
+          "/model/layers.1/attn/k_norm/Reshape_2/output_0",
+          "position_ids",
+          "cos_cache",
+          "sin_cache"
+        ],
+        "output": [
+          "/model/layers.1/attn/k_rotary/RotaryEmbedding/output_0"
+        ],
+        "name": "/model/layers.1/attn/k_rotary/RotaryEmbedding",
+        "opType": "RotaryEmbedding",
+        "attribute": [
+          {
+            "name": "interleaved",
+            "i": "0",
+            "type": "INT"
+          },
+          {
+            "name": "num_heads",
+            "i": "0",
+            "type": "INT"
+          },
+          {
+            "name": "rotary_embedding_dim",
+            "i": "0",
+            "type": "INT"
+          }
+        ],
+        "domain": "com.microsoft"
+      },
+      {
+        "input": [
+          "/model/layers.1/attn/q_rotary/RotaryEmbedding/output_0",
+          "/model/layers.1/attn/k_rotary/RotaryEmbedding/output_0",
+          "/model/layers.1/attn/v_proj/MatMul/output_0",
+          "past_key_values.1.key",
+          "past_key_values.1.value",
+          "seqlens_k",
+          "total_sequence_length",
+          "",
+          ""
+        ],
+        "output": [
+          "/model/layers.1/attn/GroupQueryAttention/output_0",
+          "present.1.key",
+          "present.1.value"
+        ],
+        "name": "/model/layers.1/attn/GroupQueryAttention",
+        "opType": "GroupQueryAttention",
+        "attribute": [
+          {
+            "name": "num_heads",
+            "i": "16",
+            "type": "INT"
+          },
+          {
+            "name": "kv_num_heads",
+            "i": "8",
+            "type": "INT"
+          },
+          {
+            "name": "scale",
+            "f": 0.088388346,
+            "type": "FLOAT"
+          },
+          {
+            "name": "softcap",
+            "f": 0.0,
+            "type": "FLOAT"
+          },
+          {
+            "name": "do_rotary",
+            "i": "0",
+            "type": "INT"
+          },
+          {
+            "name": "rotary_interleaved",
+            "i": "0",
+            "type": "INT"
+          }
+        ],
+        "domain": "com.microsoft"
+      },
+      {
+        "input": [
+          "/model/layers.1/attn/GroupQueryAttention/output_0",
+          "model.layers.1.attn.o_proj.MatMul.weight"
+        ],
+        "output": [
+          "/model/layers.1/attn/o_proj/MatMul/output_0"
+        ],
+        "name": "/model/layers.1/attn/o_proj/MatMul",
+        "opType": "MatMul"
+      },
+      {
+        "input": [
+          "/model/layers.1/input_layernorm/output_3",
+          "/model/layers.1/attn/o_proj/MatMul/output_0",
+          "model.layers.1.post_attention_layernorm.weight"
+        ],
+        "output": [
+          "/model/layers.1/post_attention_layernorm/output_0",
+          "",
+          "",
+          "/model/layers.1/post_attention_layernorm/output_3"
+        ],
+        "name": "/model/layers.1/post_attention_layernorm/SkipLayerNorm",
+        "opType": "SkipSimplifiedLayerNormalization",
+        "attribute": [
+          {
+            "name": "epsilon",
+            "f": 1e-06,
+            "type": "FLOAT"
+          }
+        ],
+        "domain": "com.microsoft"
+      },
+      {
+        "input": [
+          "/model/layers.1/post_attention_layernorm/output_0",
+          "model.layers.1.mlp.gate_proj.MatMul.weight"
+        ],
+        "output": [
+          "/model/layers.1/mlp/gate_proj/MatMul/output_0"
+        ],
+        "name": "/model/layers.1/mlp/gate_proj/MatMul",
+        "opType": "MatMul"
+      },
+      {
+        "input": [
+          "/model/layers.1/post_attention_layernorm/output_0",
+          "model.layers.1.mlp.up_proj.MatMul.weight"
+        ],
+        "output": [
+          "/model/layers.1/mlp/up_proj/MatMul/output_0"
+        ],
+        "name": "/model/layers.1/mlp/up_proj/MatMul",
+        "opType": "MatMul"
+      },
+      {
+        "input": [
+          "/model/layers.1/mlp/gate_proj/MatMul/output_0"
+        ],
+        "output": [
+          "/model/layers.1/mlp/act_fn/Sigmoid/output_0"
+        ],
+        "name": "/model/layers.1/mlp/act_fn/Sigmoid",
+        "opType": "Sigmoid"
+      },
+      {
+        "input": [
+          "/model/layers.1/mlp/gate_proj/MatMul/output_0",
+          "/model/layers.1/mlp/act_fn/Sigmoid/output_0"
+        ],
+        "output": [
+          "/model/layers.1/mlp/act_fn/Mul/output_0"
+        ],
+        "name": "/model/layers.1/mlp/act_fn/Mul",
+        "opType": "Mul"
+      },
+      {
+        "input": [
+          "/model/layers.1/mlp/act_fn/Mul/output_0",
+          "/model/layers.1/mlp/up_proj/MatMul/output_0"
+        ],
+        "output": [
+          "/model/layers.1/mlp/Mul/output_0"
+        ],
+        "name": "/model/layers.1/mlp/Mul",
+        "opType": "Mul"
+      },
+      {
+        "input": [
+          "/model/layers.1/mlp/Mul/output_0",
+          "model.layers.1.mlp.down_proj.MatMul.weight"
+        ],
+        "output": [
+          "/model/layers.1/mlp/down_proj/MatMul/output_0"
+        ],
+        "name": "/model/layers.1/mlp/down_proj/MatMul",
+        "opType": "MatMul"
+      }
+    ],
+    "name": "decoder_layer_1_runtime",
+    "initializer": [
+      {
+        "dims": [
+          "3"
+        ],
+        "dataType": 7,
+        "name": "/model/constants/TensorProto.INT64/1D/0, -1, 128",
+        "rawData": "AAAAAAAAAAD//////////4AAAAAAAAAA"
+      },
+      {
+        "dims": [
+          "3"
+        ],
+        "dataType": 7,
+        "name": "/model/constants/TensorProto.INT64/1D/0, -1, 2048",
+        "rawData": "AAAAAAAAAAD//////////wAIAAAAAAAA"
+      },
+      {
+        "dims": [
+          "3"
+        ],
+        "dataType": 7,
+        "name": "/model/constants/TensorProto.INT64/1D/0, -1, 1024",
+        "rawData": "AAAAAAAAAAD//////////wAEAAAAAAAA"
+      }
+    ],
+    "docString": "Decoder layer 1 as executed by the runtime: only the layer's own operator types are kept; the shared input preparation is exposed as graph inputs.",
+    "input": [
+      {
+        "name": "/model/layers.0/mlp/down_proj/MatMul/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.0/post_attention_layernorm/output_3",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "cos_cache",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "40960"
+                },
+                {
+                  "dimValue": "64"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.attn.k_norm.layernorm.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "128"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.attn.k_proj.MatMul.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "1024"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.attn.o_proj.MatMul.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "2048"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.attn.q_norm.layernorm.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "128"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.attn.q_proj.MatMul.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "1024"
+                },
+                {
+                  "dimValue": "2048"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.attn.v_proj.MatMul.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "1024"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.input_layernorm.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.mlp.down_proj.MatMul.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "3072"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.mlp.gate_proj.MatMul.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "1024"
+                },
+                {
+                  "dimValue": "3072"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.mlp.up_proj.MatMul.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "1024"
+                },
+                {
+                  "dimValue": "3072"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "model.layers.1.post_attention_layernorm.weight",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "past_key_values.1.key",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimValue": "8"
+                },
+                {
+                  "dimParam": "past_sequence_length"
+                },
+                {
+                  "dimValue": "128"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "past_key_values.1.value",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimValue": "8"
+                },
+                {
+                  "dimParam": "past_sequence_length"
+                },
+                {
+                  "dimValue": "128"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "position_ids",
+        "type": {
+          "tensorType": {
+            "elemType": 7,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "seqlens_k",
+        "type": {
+          "tensorType": {
+            "elemType": 6,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimValue": "1"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "sin_cache",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimValue": "40960"
+                },
+                {
+                  "dimValue": "64"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "total_sequence_length",
+        "type": {
+          "tensorType": {
+            "elemType": 6,
+            "shape": {}
+          }
+        }
+      }
+    ],
+    "output": [
+      {
+        "name": "/model/layers.1/mlp/down_proj/MatMul/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/post_attention_layernorm/output_3",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "present.1.key",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimValue": "8"
+                },
+                {
+                  "dimParam": "total_sequence_length"
+                },
+                {
+                  "dimValue": "128"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "present.1.value",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimValue": "8"
+                },
+                {
+                  "dimParam": "total_sequence_length"
+                },
+                {
+                  "dimValue": "128"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "valueInfo": [
+      {
+        "name": "/model/constants/TensorProto.INT64/1D/0, -1, 128",
+        "type": {
+          "tensorType": {
+            "elemType": 7,
+            "shape": {}
+          }
+        }
+      },
+      {
+        "name": "/model/constants/TensorProto.INT64/1D/0, -1, 2048",
+        "type": {
+          "tensorType": {
+            "elemType": 7,
+            "shape": {}
+          }
+        }
+      },
+      {
+        "name": "/model/constants/TensorProto.INT64/1D/0, -1, 1024",
+        "type": {
+          "tensorType": {
+            "elemType": 7,
+            "shape": {}
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/input_layernorm/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/input_layernorm/output_3",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/q_proj/MatMul/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "2048"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/k_proj/MatMul/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/v_proj/MatMul/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/q_norm/Reshape_1/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length * num_attention_heads"
+                },
+                {
+                  "dimValue": "128"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/k_norm/Reshape_1/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length * num_key_value_heads"
+                },
+                {
+                  "dimValue": "128"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/q_norm/SimplifiedLayerNormalization/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length * num_attention_heads"
+                },
+                {
+                  "dimValue": "128"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/k_norm/SimplifiedLayerNormalization/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length * num_key_value_heads"
+                },
+                {
+                  "dimValue": "128"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/q_norm/Reshape_2/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "2048"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/k_norm/Reshape_2/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/q_rotary/RotaryEmbedding/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "2048"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/k_rotary/RotaryEmbedding/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/GroupQueryAttention/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "2048"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/attn/o_proj/MatMul/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/post_attention_layernorm/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "1024"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/mlp/gate_proj/MatMul/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "3072"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/mlp/up_proj/MatMul/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "3072"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/mlp/act_fn/Sigmoid/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "3072"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/mlp/act_fn/Mul/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "3072"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "/model/layers.1/mlp/Mul/output_0",
+        "type": {
+          "tensorType": {
+            "elemType": 1,
+            "shape": {
+              "dim": [
+                {
+                  "dimParam": "batch_size"
+                },
+                {
+                  "dimParam": "sequence_length"
+                },
+                {
+                  "dimValue": "3072"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "opsetImport": [
+    {
+      "version": "14"
+    },
+    {
+      "domain": "com.microsoft",
+      "version": "1"
+    }
+  ]
+}
