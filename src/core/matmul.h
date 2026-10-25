@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <stdexcept>
+#include <string>
 
 /**
  * @brief Perform matrix multiplication using Eigen library.
@@ -20,9 +21,8 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> matmul(
   if (A.cols() != B.rows()) {
     throw std::invalid_argument(
         "matmul: A.cols() = " + std::to_string(A.cols()) +
-        ", B.rows() = " + std::to_string(B.rows()));
+        ", B.rows() = " + std::to_string(B.rows()) + ", expected equal");
   }
-
   return A * B;
 }
 

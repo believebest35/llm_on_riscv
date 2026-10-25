@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -45,41 +46,61 @@ group_query_attention(
 
   if (query.rows() != key.rows() || query.rows() != value.rows()) {
     throw std::invalid_argument(
-        "group_query_attention: query/key/value must share sequence length");
+        "group_query_attention: query.rows() = " +
+        std::to_string(query.rows()) + ", key.rows() = " +
+        std::to_string(key.rows()) + ", value.rows() = " +
+        std::to_string(value.rows()) + ", expected equal");
   }
   if (query.cols() != kNumQueryHeads * kHeadDim) {
     throw std::invalid_argument(
-        "group_query_attention: query hidden size must be 2048");
+        "group_query_attention: query.cols() = " +
+        std::to_string(query.cols()) + ", expected " +
+        std::to_string(kNumQueryHeads * kHeadDim));
   }
   if (key.cols() != kNumKeyValueHeads * kHeadDim ||
       value.cols() != kNumKeyValueHeads * kHeadDim) {
     throw std::invalid_argument(
-        "group_query_attention: key/value hidden size must be 1024");
+        "group_query_attention: key.cols() = " +
+        std::to_string(key.cols()) + ", value.cols() = " +
+        std::to_string(value.cols()) + ", expected " +
+        std::to_string(kNumKeyValueHeads * kHeadDim));
   }
   if (past_key.cols() != kHeadDim || past_value.cols() != kHeadDim) {
     throw std::invalid_argument(
-        "group_query_attention: past key/value second dimension must be 128");
+        "group_query_attention: past_key.cols() = " +
+        std::to_string(past_key.cols()) + ", past_value.cols() = " +
+        std::to_string(past_value.cols()) + ", expected " +
+        std::to_string(kHeadDim));
   }
   if (past_key.rows() != past_value.rows()) {
     throw std::invalid_argument(
-        "group_query_attention: past key/value rows must match");
+        "group_query_attention: past_key.rows() = " +
+        std::to_string(past_key.rows()) + ", past_value.rows() = " +
+        std::to_string(past_value.rows()) + ", expected equal");
   }
   if (past_key.rows() % kNumKeyValueHeads != 0) {
     throw std::invalid_argument(
-        "group_query_attention: past key/value rows must be divisible by 8");
+        "group_query_attention: past_key.rows() = " +
+        std::to_string(past_key.rows()) + ", expected divisible by " +
+        std::to_string(kNumKeyValueHeads));
   }
 
-  const int sequence = query.rows();
-  const int past_sequence = past_key.rows() / kNumKeyValueHeads;
+  const int sequence = static_cast<int>(query.rows());
+  const int past_sequence =
+      static_cast<int>(past_key.rows() / kNumKeyValueHeads);
 
   if (total_sequence_length != past_sequence + sequence) {
     throw std::invalid_argument(
-        "group_query_attention: total_sequence_length must equal "
-        "past_sequence_length + sequence_length");
+        "group_query_attention: total_sequence_length = " +
+        std::to_string(total_sequence_length) +
+        ", expected past_sequence_length + sequence_length = " +
+        std::to_string(past_sequence + sequence));
   }
   if (seqlens_k < 0 || seqlens_k >= total_sequence_length) {
     throw std::invalid_argument(
-        "group_query_attention: seqlens_k must be a valid KV index");
+        "group_query_attention: seqlens_k = " +
+        std::to_string(seqlens_k) + ", expected in [0, " +
+        std::to_string(total_sequence_length) + ")");
   }
 
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_key(
@@ -148,7 +169,6 @@ group_query_attention(
 
     output.block(0, qh * kHeadDim, sequence, kHeadDim) = probs * v_block;
   }
-
   return {output, present_key, present_value};
 }
 

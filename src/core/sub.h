@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <algorithm>
 #include <stdexcept>
+#include <string>
 
 /**
  * @brief Perform element-wise subtraction with Numpy-style broadcasting.
@@ -21,33 +22,34 @@ template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> sub(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
-  const int rows = static_cast<int>(std::max(A.rows(), B.rows()));
-  const int cols = static_cast<int>(std::max(A.cols(), B.cols()));
+  const int a_rows = static_cast<int>(A.rows());
+  const int a_cols = static_cast<int>(A.cols());
+  const int b_rows = static_cast<int>(B.rows());
+  const int b_cols = static_cast<int>(B.cols());
+  const int rows = std::max(a_rows, b_rows);
+  const int cols = std::max(a_cols, b_cols);
   const bool a_broadcastable =
-      (A.rows() == rows || A.rows() == 1) &&
-      (A.cols() == cols || A.cols() == 1);
+      (a_rows == rows || a_rows == 1) && (a_cols == cols || a_cols == 1);
   const bool b_broadcastable =
-      (B.rows() == rows || B.rows() == 1) &&
-      (B.cols() == cols || B.cols() == 1);
+      (b_rows == rows || b_rows == 1) && (b_cols == cols || b_cols == 1);
   if (!a_broadcastable || !b_broadcastable) {
     throw std::invalid_argument(
-        "sub: A.rows() = " + std::to_string(A.rows()) +
-        ", A.cols() = " + std::to_string(A.cols()) +
-        ", B.rows() = " + std::to_string(B.rows()) +
-        ", B.cols() = " + std::to_string(B.cols()));
+        "sub: A = " + std::to_string(A.rows()) + "x" +
+        std::to_string(A.cols()) + ", B = " + std::to_string(B.rows()) + "x" +
+        std::to_string(B.cols()) + ", expected broadcastable shapes");
   }
 
-  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C(rows, cols);
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(rows, cols);
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
-      const int ai = (A.rows() == 1) ? 0 : i;
-      const int aj = (A.cols() == 1) ? 0 : j;
-      const int bi = (B.rows() == 1) ? 0 : i;
-      const int bj = (B.cols() == 1) ? 0 : j;
-      C(i, j) = A(ai, aj) - B(bi, bj);
+      const int ai = (a_rows == 1) ? 0 : i;
+      const int aj = (a_cols == 1) ? 0 : j;
+      const int bi = (b_rows == 1) ? 0 : i;
+      const int bj = (b_cols == 1) ? 0 : j;
+      output(i, j) = A(ai, aj) - B(bi, bj);
     }
   }
-  return C;
+  return output;
 }
 
 #endif  // SUB_H

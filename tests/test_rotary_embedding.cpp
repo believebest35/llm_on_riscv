@@ -47,17 +47,17 @@ class RotaryEmbeddingTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& sin_cache,
       int num_heads, Scalar tolerance,
       const std::string& test_description = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result = rotary_embedding<Scalar>(
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_output;
+    ASSERT_NO_THROW(impl_output = rotary_embedding<Scalar>(
                         input, position_id, cos_cache, sin_cache, num_heads))
         << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_rotary_embedding(
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_output;
+    ASSERT_NO_THROW(golden_output = golden_reference_rotary_embedding(
                         input, position_id, cos_cache, sin_cache, num_heads))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_output, golden_output, tolerance, test_description);
   }
 
   // Build a genuine RoPE table for positions [0, rows) so that
@@ -128,5 +128,5 @@ TEST_F(RotaryEmbeddingTest, InvalidInputs) {
 
   // position_id + input rows must stay within the cache.
   EXPECT_THROW(rotary_embedding<float>(input, 15, cos_cache, sin_cache, kHeads),
-               std::out_of_range);
+               std::invalid_argument);
 }

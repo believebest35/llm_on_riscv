@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <stdexcept>
+#include <string>
 
 /**
  * @brief Apply rotary positional embeddings with a precomputed cos/sin cache.
@@ -33,26 +34,46 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> rotary_embedding(
     int num_heads) {
   const int rows = static_cast<int>(input.rows());
   const int hidden_dim = static_cast<int>(input.cols());
-  if (num_heads <= 0 || hidden_dim % num_heads != 0) {
+  if (num_heads <= 0) {
+    throw std::invalid_argument("rotary_embedding: num_heads = " +
+                                std::to_string(num_heads) + ", expected > 0");
+  }
+  if (hidden_dim % num_heads != 0) {
     throw std::invalid_argument(
-        "rotary_embedding: hidden_dim must be divisible by num_heads");
+        "rotary_embedding: hidden_dim = " + std::to_string(hidden_dim) +
+        ", expected divisible by num_heads = " + std::to_string(num_heads));
   }
   const int head_dim = hidden_dim / num_heads;
   if (head_dim % 2 != 0) {
-    throw std::invalid_argument("rotary_embedding: head_dim must be even");
+    throw std::invalid_argument("rotary_embedding: head_dim = " +
+                                std::to_string(head_dim) + ", expected even");
   }
   const int rope_dim = head_dim / 2;
 
   if (cos_cache.cols() != rope_dim || sin_cache.cols() != rope_dim) {
     throw std::invalid_argument(
-        "rotary_embedding: cache last dim must equal head_dim/2");
+        "rotary_embedding: cos_cache.cols() = " +
+        std::to_string(cos_cache.cols()) + ", sin_cache.cols() = " +
+        std::to_string(sin_cache.cols()) +
+        ", expected head_dim / 2 = " + std::to_string(rope_dim));
   }
   if (cos_cache.rows() != sin_cache.rows()) {
     throw std::invalid_argument(
-        "rotary_embedding: cos_cache and sin_cache row count must match");
+        "rotary_embedding: cos_cache.rows() = " +
+        std::to_string(cos_cache.rows()) + ", sin_cache.rows() = " +
+        std::to_string(sin_cache.rows()) + ", expected equal");
   }
-  if (position_id < 0 || position_id + rows > cos_cache.rows()) {
-    throw std::out_of_range("rotary_embedding: position out of cache bounds");
+  if (position_id < 0) {
+    throw std::invalid_argument("rotary_embedding: position_id = " +
+                                std::to_string(position_id) +
+                                ", expected >= 0");
+  }
+  if (position_id + rows > cos_cache.rows()) {
+    throw std::invalid_argument(
+        "rotary_embedding: position_id = " + std::to_string(position_id) +
+        ", rows = " + std::to_string(rows) +
+        ", expected position_id + rows <= cos_cache.rows() = " +
+        std::to_string(cos_cache.rows()));
   }
 
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(rows,

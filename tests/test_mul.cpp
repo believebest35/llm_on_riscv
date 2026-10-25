@@ -8,22 +8,23 @@ class MulTest : public GTestBase {
   golden_reference_mul(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
-    const int m = A.rows();
-    const int n = A.cols();
+    const int m = static_cast<int>(A.rows());
+    const int n = static_cast<int>(A.cols());
+    const int b_rows = static_cast<int>(B.rows());
+    const int b_cols = static_cast<int>(B.cols());
 
-    if (m != B.rows() || n != B.cols()) {
+    if (m != b_rows || n != b_cols) {
       throw std::invalid_argument("Matrix dimensions incompatible");
     }
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C(m, n);
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(m, n);
 
     for (int i = 0; i < m; ++i) {
       for (int j = 0; j < n; ++j) {
-        C(i, j) = A(i, j) * B(i, j);
+        output(i, j) = A(i, j) * B(i, j);
       }
     }
-
-    return C;
+    return output;
   }
 
   template <typename Scalar>
@@ -31,15 +32,15 @@ class MulTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B,
       Scalar tolerance, const std::string& test_description = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result = mul(A, B))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_output;
+    ASSERT_NO_THROW(impl_output = mul(A, B))
         << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_mul(A, B))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_output;
+    ASSERT_NO_THROW(golden_output = golden_reference_mul(A, B))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_output, golden_output, tolerance, test_description);
   }
 };
 

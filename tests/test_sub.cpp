@@ -10,25 +10,27 @@ class SubTest : public GTestBase {
   golden_reference_sub(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
-    const int m = std::max(A.rows(), B.rows());
-    const int n = std::max(A.cols(), B.cols());
-    if ((A.rows() != m && A.rows() != 1) ||
-        (A.cols() != n && A.cols() != 1) ||
-        (B.rows() != m && B.rows() != 1) ||
-        (B.cols() != n && B.cols() != 1)) {
+    const int a_rows = static_cast<int>(A.rows());
+    const int a_cols = static_cast<int>(A.cols());
+    const int b_rows = static_cast<int>(B.rows());
+    const int b_cols = static_cast<int>(B.cols());
+    const int m = std::max(a_rows, b_rows);
+    const int n = std::max(a_cols, b_cols);
+    if ((a_rows != m && a_rows != 1) || (a_cols != n && a_cols != 1) ||
+        (b_rows != m && b_rows != 1) || (b_cols != n && b_cols != 1)) {
       throw std::invalid_argument("Matrix dimensions incompatible");
     }
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> C(m, n);
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(m, n);
     for (int i = 0; i < m; ++i) {
       for (int j = 0; j < n; ++j) {
-        const int ai = (A.rows() == 1) ? 0 : i;
-        const int aj = (A.cols() == 1) ? 0 : j;
-        const int bi = (B.rows() == 1) ? 0 : i;
-        const int bj = (B.cols() == 1) ? 0 : j;
-        C(i, j) = A(ai, aj) - B(bi, bj);
+        const int ai = (a_rows == 1) ? 0 : i;
+        const int aj = (a_cols == 1) ? 0 : j;
+        const int bi = (b_rows == 1) ? 0 : i;
+        const int bj = (b_cols == 1) ? 0 : j;
+        output(i, j) = A(ai, aj) - B(bi, bj);
       }
     }
-    return C;
+    return output;
   }
 
   template <typename Scalar>
@@ -36,15 +38,15 @@ class SubTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B,
       Scalar tolerance, const std::string& test_description = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result = sub(A, B))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_output;
+    ASSERT_NO_THROW(impl_output = sub(A, B))
         << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_sub(A, B))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_output;
+    ASSERT_NO_THROW(golden_output = golden_reference_sub(A, B))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_output, golden_output, tolerance, test_description);
   }
 };
 
@@ -78,6 +80,6 @@ TEST_F(SubTest, InvalidInputs) {
   auto B = generate_random_matrix<float>(3, 2);
   EXPECT_THROW(sub(A, B), std::invalid_argument);
 
-  auto C = generate_random_matrix<float>(2, 2);
-  EXPECT_THROW(sub(A, C), std::invalid_argument);
+  auto other = generate_random_matrix<float>(2, 2);
+  EXPECT_THROW(sub(A, other), std::invalid_argument);
 }

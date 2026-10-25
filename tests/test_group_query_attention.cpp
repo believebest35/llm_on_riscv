@@ -6,10 +6,10 @@
 class GroupQueryAttentionTest : public GTestBase {
  protected:
   static constexpr int kNumQueryHeads = 16;
-  static constexpr int kNumKvHeads = 8;
+  static constexpr int kNumKeyValueHeads = 8;
   static constexpr int kHeadDim = 128;
   static constexpr int kQueryHidden = kNumQueryHeads * kHeadDim;
-  static constexpr int kKvHidden = kNumKvHeads * kHeadDim;
+  static constexpr int kKvHidden = kNumKeyValueHeads * kHeadDim;
 
   template <typename Scalar>
   std::tuple<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>,
@@ -22,17 +22,18 @@ class GroupQueryAttentionTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_key,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& past_value,
       int seqlens_k, int total_sequence_length) {
-    const int sequence = query.rows();
-    const int past_sequence = past_key.rows() / kNumKvHeads;
+    const int sequence = static_cast<int>(query.rows());
+    const int past_sequence =
+        static_cast<int>(past_key.rows() / kNumKeyValueHeads);
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_key(
-        kNumKvHeads * total_sequence_length, kHeadDim);
+        kNumKeyValueHeads * total_sequence_length, kHeadDim);
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> present_value(
-        kNumKvHeads * total_sequence_length, kHeadDim);
+        kNumKeyValueHeads * total_sequence_length, kHeadDim);
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(
         sequence, kQueryHidden);
 
-    for (int h = 0; h < kNumKvHeads; ++h) {
+    for (int h = 0; h < kNumKeyValueHeads; ++h) {
       for (int s = 0; s < past_sequence; ++s) {
         for (int d = 0; d < kHeadDim; ++d) {
           present_key(h * total_sequence_length + s, d) =
@@ -104,7 +105,6 @@ class GroupQueryAttentionTest : public GTestBase {
         }
       }
     }
-
     return {output, present_key, present_value};
   }
 
@@ -166,9 +166,9 @@ TEST_F(GroupQueryAttentionTest, ValidInputs) {
     auto value =
         generate_random_matrix<float>(seq, kKvHidden, -0.5f, 0.5f);
     auto past_key = generate_random_matrix<float>(
-        kNumKvHeads * past_seq, kHeadDim, -0.5f, 0.5f);
+        kNumKeyValueHeads * past_seq, kHeadDim, -0.5f, 0.5f);
     auto past_value = generate_random_matrix<float>(
-        kNumKvHeads * past_seq, kHeadDim, -0.5f, 0.5f);
+        kNumKeyValueHeads * past_seq, kHeadDim, -0.5f, 0.5f);
 
     std::string test_name = "GQA seq=" + std::to_string(seq) +
                             " past_seq=" + std::to_string(past_seq);

@@ -6,42 +6,44 @@ class SimplifiedLayerNormalizationTest : public GTestBase {
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
   golden_reference_simplified_layer_normalization(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& scale, Scalar epsilon) {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> Y(X.rows(), X.cols());
-    for (int i = 0; i < X.rows(); ++i) {
+    const int rows = static_cast<int>(input.rows());
+    const int cols = static_cast<int>(input.cols());
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(rows, cols);
+    for (int i = 0; i < rows; ++i) {
       Scalar sum_sq = static_cast<Scalar>(0);
-      for (int j = 0; j < X.cols(); ++j) {
-        const Scalar v = X(i, j);
+      for (int j = 0; j < cols; ++j) {
+        const Scalar v = input(i, j);
         sum_sq += v * v;
       }
-      const Scalar mean_sq = sum_sq / static_cast<Scalar>(X.cols());
+      const Scalar mean_sq = sum_sq / static_cast<Scalar>(cols);
       const Scalar rms = std::sqrt(mean_sq + epsilon);
 
-      for (int j = 0; j < X.cols(); ++j) {
-        Y(i, j) = (X(i, j) / rms) * scale(j);
+      for (int j = 0; j < cols; ++j) {
+        output(i, j) = (input(i, j) / rms) * scale(j);
       }
     }
-    return Y;
+    return output;
   }
 
   template <typename Scalar>
   void test_with_golden(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& X,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>& scale, Scalar epsilon,
       Scalar tolerance, const std::string& test_description = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result =
-                        simplified_layer_normalization(X, scale, epsilon))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_output;
+    ASSERT_NO_THROW(impl_output =
+                        simplified_layer_normalization(input, scale, epsilon))
         << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_output;
     ASSERT_NO_THROW(
-        golden_result = golden_reference_simplified_layer_normalization(
-            X, scale, epsilon))
+        golden_output = golden_reference_simplified_layer_normalization(
+            input, scale, epsilon))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_output, golden_output, tolerance, test_description);
   }
 };
 
@@ -50,27 +52,27 @@ TEST_F(SimplifiedLayerNormalizationTest, ValidInputs) {
       {1, 1},     {2, 3},      {4, 8},      {64, 128},
       {128, 256}, {256, 1024}, {1024, 128}, {1024, 3072},
       // docs/01_dev.md (Qwen3-0.6B) shapes.
-      {4, 1024}, {64, 128},
+      {4, 1024},
   };
 
   const float epsilon = 1e-5f;
   const float tolerance = 0.0f;
 
   for (const auto& [rows, cols] : test_cases) {
-    auto X = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
-    auto w = generate_random_vector<float>(cols, 0.5f, 1.5f);
+    auto input = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
+    auto scale = generate_random_vector<float>(cols, 0.5f, 1.5f);
 
     std::string test_name =
         "SimplifiedLayerNormalization " + std::to_string(rows) + "x" +
         std::to_string(cols);
 
-    test_with_golden(X, w, epsilon, tolerance, test_name);
+    test_with_golden(input, scale, epsilon, tolerance, test_name);
   }
 }
 
 TEST_F(SimplifiedLayerNormalizationTest, InvalidInputs) {
-  auto X = generate_random_matrix<float>(4, 8);
+  auto input = generate_random_matrix<float>(4, 8);
   auto bad_scale = generate_random_vector<float>(7);
-  EXPECT_THROW(simplified_layer_normalization(X, bad_scale, 1e-5f),
+  EXPECT_THROW(simplified_layer_normalization(input, bad_scale, 1e-5f),
                std::invalid_argument);
 }

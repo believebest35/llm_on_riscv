@@ -1,3 +1,5 @@
+#include <cstdint>
+
 #include "core/gather.h"
 #include "gtest_base.h"
 
@@ -6,70 +8,72 @@ class GatherTest : public GTestBase {
   template <typename Scalar, typename IndexType>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
   golden_reference_gather(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input,
       const Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>& indices,
       int axis) {
     if (axis < 0) {
-      axis += 2;  // 2-D data: -1 -> 1, -2 -> 0
+      axis += 2;  // 2-D input: -1 -> 1, -2 -> 0
     }
-    const int rows = data.rows();
-    const int cols = data.cols();
+    const int rows = static_cast<int>(input.rows());
+    const int cols = static_cast<int>(input.cols());
+    const int index_rows = static_cast<int>(indices.rows());
+    const int index_cols = static_cast<int>(indices.cols());
     const int num_indices = static_cast<int>(indices.size());
 
     if (axis == 0) {
-      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(num_indices,
+      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(num_indices,
                                                                    cols);
       int out_i = 0;
-      for (int i = 0; i < indices.rows(); ++i) {
-        for (int j = 0; j < indices.cols(); ++j) {
+      for (int i = 0; i < index_rows; ++i) {
+        for (int j = 0; j < index_cols; ++j) {
           int idx = static_cast<int>(indices(i, j));
           if (idx < 0) {
             idx += rows;
           }
           for (int k = 0; k < cols; ++k) {
-            result(out_i, k) = data(idx, k);
+            output(out_i, k) = input(idx, k);
           }
           ++out_i;
         }
       }
-      return result;
+      return output;
     } else {
-      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(rows,
+      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(rows,
                                                                    num_indices);
       int out_j = 0;
-      for (int i = 0; i < indices.rows(); ++i) {
-        for (int j = 0; j < indices.cols(); ++j) {
+      for (int i = 0; i < index_rows; ++i) {
+        for (int j = 0; j < index_cols; ++j) {
           int idx = static_cast<int>(indices(i, j));
           if (idx < 0) {
             idx += cols;
           }
           for (int k = 0; k < rows; ++k) {
-            result(k, out_j) = data(k, idx);
+            output(k, out_j) = input(k, idx);
           }
           ++out_j;
         }
       }
-      return result;
+      return output;
     }
   }
 
   template <typename Scalar, typename IndexType>
   void test_with_golden(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& data,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input,
       const Eigen::Matrix<IndexType, Eigen::Dynamic, Eigen::Dynamic>& indices,
       int axis, Scalar tolerance, const std::string& test_description = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_output;
     ASSERT_NO_THROW(
-        (impl_result = gather<Scalar, IndexType>(data, indices, axis)))
+        (impl_output = gather<Scalar, IndexType>(input, indices, axis)))
         << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_output;
     ASSERT_NO_THROW(
-        (golden_result = golden_reference_gather<Scalar, IndexType>(
-             data, indices, axis)))
+        (golden_output = golden_reference_gather<Scalar, IndexType>(
+             input, indices, axis)))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_output, golden_output, tolerance, test_description);
   }
 };
 
@@ -86,35 +90,37 @@ TEST_F(GatherTest, ValidInputs) {
   const float tolerance = 0.0f;
 
   for (const auto& [rows, cols, num_idx, axis] : test_cases) {
-    auto data = generate_random_matrix<float>(rows, cols, -10.0f, 10.0f);
-    Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> idx(1, num_idx);
+    auto input = generate_random_matrix<float>(rows, cols, -10.0f, 10.0f);
     const int norm_axis = (axis < 0) ? axis + 2 : axis;
-    int axis_size = (norm_axis == 0) ? rows : cols;
-    for (int i = 0; i < num_idx; ++i) {
-      // Negative indices count from the end, as allowed by ONNX.
-      idx(0, i) = std::rand() % (2 * axis_size) - axis_size;
-    }
+    const int axis_size = (norm_axis == 0) ? rows : cols;
+    auto int_indices =
+        generate_random_indices<int>(num_idx, -axis_size, axis_size - 1);
+    auto int64_indices = generate_random_indices<std::int64_t>(
+        num_idx, -axis_size, axis_size - 1);
 
     std::string test_name = "Gather " + std::to_string(rows) + "x" +
                             std::to_string(cols) + " num_idx=" +
                             std::to_string(num_idx) +
                             " axis=" + std::to_string(axis);
 
-    test_with_golden<float, int>(data, idx, axis, tolerance, test_name);
+    test_with_golden<float, int>(input, int_indices, axis, tolerance,
+                                 test_name);
+    test_with_golden<float, std::int64_t>(input, int64_indices, axis, tolerance,
+                                          test_name + " int64");
   }
 }
 
 TEST_F(GatherTest, InvalidInputs) {
-  auto data = generate_random_matrix<float>(2, 3);
+  auto input = generate_random_matrix<float>(2, 3);
 
   Eigen::MatrixXi idx(1, 1);
-  idx(0, 0) = std::rand() % data.cols();
-  EXPECT_THROW((gather<float, int>(data, idx, 2)), std::invalid_argument);
+  idx(0, 0) = 0;
+  EXPECT_THROW((gather<float, int>(input, idx, 2)), std::invalid_argument);
 
   Eigen::MatrixXi out_of_range(1, 1);
-  out_of_range(0, 0) = static_cast<int>(data.size());
-  EXPECT_THROW((gather<float, int>(data, out_of_range, 0)),
+  out_of_range(0, 0) = static_cast<int>(input.size());
+  EXPECT_THROW((gather<float, int>(input, out_of_range, 0)),
                std::invalid_argument);
-  EXPECT_THROW((gather<float, int>(data, out_of_range, 1)),
+  EXPECT_THROW((gather<float, int>(input, out_of_range, 1)),
                std::invalid_argument);
 }

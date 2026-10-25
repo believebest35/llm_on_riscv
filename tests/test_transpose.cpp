@@ -6,30 +6,31 @@ class TransposeTest : public GTestBase {
   template <typename Scalar>
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
   golden_reference_transpose(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A) {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> result(A.cols(),
-                                                                 A.rows());
-    for (int i = 0; i < A.rows(); ++i) {
-      for (int j = 0; j < A.cols(); ++j) {
-        result(j, i) = A(i, j);
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input) {
+    const int rows = static_cast<int>(input.rows());
+    const int cols = static_cast<int>(input.cols());
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(cols, rows);
+    for (int i = 0; i < rows; ++i) {
+      for (int j = 0; j < cols; ++j) {
+        output(j, i) = input(i, j);
       }
     }
-    return result;
+    return output;
   }
 
   template <typename Scalar>
   void test_with_golden(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input,
       Scalar tolerance, const std::string& test_description = "") {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result = transpose<Scalar>(A))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_output;
+    ASSERT_NO_THROW(impl_output = transpose<Scalar>(input))
         << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_transpose(A))
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_output;
+    ASSERT_NO_THROW(golden_output = golden_reference_transpose(input))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_output, golden_output, tolerance, test_description);
   }
 };
 
@@ -43,12 +44,12 @@ TEST_F(TransposeTest, ValidInputs) {
   const float tolerance = 0.0f;
 
   for (const auto& [rows, cols] : test_cases) {
-    auto A = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
+    auto input = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
 
     std::string test_name = "Transpose " + std::to_string(rows) + "x" +
                             std::to_string(cols);
 
-    test_with_golden(A, tolerance, test_name);
+    test_with_golden(input, tolerance, test_name);
   }
 }
 

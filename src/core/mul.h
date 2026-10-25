@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <stdexcept>
+#include <string>
 
 /**
  * @brief Perform element-wise multiplication using Eigen library.
@@ -19,12 +20,10 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> mul(
     const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
   if (A.rows() != B.rows() || A.cols() != B.cols()) {
     throw std::invalid_argument(
-        "mul: A.rows() = " + std::to_string(A.rows()) +
-        ", A.cols() = " + std::to_string(A.cols()) +
-        ", B.rows() = " + std::to_string(B.rows()) +
-        ", B.cols() = " + std::to_string(B.cols()));
+        "mul: A = " + std::to_string(A.rows()) + "x" +
+        std::to_string(A.cols()) + ", B = " + std::to_string(B.rows()) + "x" +
+        std::to_string(B.cols()) + ", expected same shape");
   }
-
   return A.cwiseProduct(B);
 }
 

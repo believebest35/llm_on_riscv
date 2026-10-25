@@ -8,26 +8,29 @@ class ShapeTest : public GTestBase {
   template <typename Scalar>
   Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic>
   golden_reference_shape(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A) {
-    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> result(2, 1);
-    result(0, 0) = A.rows();
-    result(1, 0) = A.cols();
-    return result;
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input) {
+    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> output(2, 1);
+    const std::int64_t dims[2] = {static_cast<std::int64_t>(input.rows()),
+                                  static_cast<std::int64_t>(input.cols())};
+    for (int i = 0; i < 2; ++i) {
+      output(i, 0) = dims[i];
+    }
+    return output;
   }
 
   template <typename Scalar>
   void test_with_golden(
-      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
-      double tolerance, const std::string& test_description = "") {
-    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> impl_result;
-    ASSERT_NO_THROW(impl_result = shape(A))
+      const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input,
+      Scalar tolerance, const std::string& test_description = "") {
+    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> impl_output;
+    ASSERT_NO_THROW(impl_output = shape(input))
         << "Implementation failed: " << test_description;
 
-    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> golden_result;
-    ASSERT_NO_THROW(golden_result = golden_reference_shape(A))
+    Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> golden_output;
+    ASSERT_NO_THROW(golden_output = golden_reference_shape(input))
         << "Golden reference failed: " << test_description;
 
-    expect_matrix_near(impl_result, golden_result, tolerance, test_description);
+    expect_matrix_near(impl_output, golden_output, tolerance, test_description);
   }
 };
 
@@ -41,11 +44,11 @@ TEST_F(ShapeTest, ValidInputs) {
   const float tolerance = 0.0f;
 
   for (const auto& [rows, cols] : test_cases) {
-    auto A = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
+    auto input = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
 
     std::string test_name = "Shape " + std::to_string(rows) + "x" +
                             std::to_string(cols);
 
-    test_with_golden(A, tolerance, test_name);
+    test_with_golden(input, tolerance, test_name);
   }
 }

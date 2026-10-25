@@ -7,18 +7,19 @@
  * @brief Return a constant matrix tensor.
  *
  * This helper mirrors the behavior of the ONNX `Constant` operator where the
- * constant is provided directly as a matrix tensor.
+ * constant is provided directly as a matrix tensor. Every input is valid; this
+ * kernel does not throw.
  *
  * @tparam Scalar Type of the input and output matrices.
- * @param value Input constant tensor, shape:
+ * @param input Input constant tensor, shape:
  *        Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>.
  * @return Output tensor, shape:
  *         Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>.
  */
 template <typename Scalar>
 Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> constant(
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& value) {
-  return value;
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input) {
+  return input;
 }
 
 #endif  // CONSTANT_H
