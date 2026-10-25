@@ -1,5 +1,4 @@
 add_library(core
-    hello.cpp
     tensor/tensor.cpp
     memory/memory_pool.cpp
 )

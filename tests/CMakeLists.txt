@@ -1,7 +1,6 @@
 include(GoogleTest)
 
 set(TEST_TARGETS
-    test_hello
     test_matmul
     test_mul
     test_simplified_layer_normalization
