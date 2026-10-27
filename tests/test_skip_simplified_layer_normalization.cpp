@@ -40,17 +40,19 @@ class SkipSimplifiedLayerNormalizationTest : public GTestBase {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_output;
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
         impl_input_skip_bias_sum;
-    ASSERT_NO_THROW(std::tie(impl_output, impl_input_skip_bias_sum) =
-                        skip_simplified_layer_normalization(input, skip, gamma,
-                                                            epsilon))
+    ASSERT_NO_THROW(
+        std::tie(impl_output, impl_input_skip_bias_sum) =
+            skip_simplified_layer_normalization<Scalar>(input, skip, gamma,
+                                                        epsilon))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_output;
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
         golden_input_skip_bias_sum;
-    ASSERT_NO_THROW(std::tie(golden_output, golden_input_skip_bias_sum) =
-                        golden_reference_skip_simplified_layer_normalization(
-                            input, skip, gamma, epsilon))
+    ASSERT_NO_THROW(
+        std::tie(golden_output, golden_input_skip_bias_sum) =
+            golden_reference_skip_simplified_layer_normalization<Scalar>(
+                input, skip, gamma, epsilon))
         << "Golden reference failed: " << test_description;
 
     expect_matrix_near(impl_output, golden_output, tolerance,
@@ -63,7 +65,13 @@ class SkipSimplifiedLayerNormalizationTest : public GTestBase {
 
 TEST_F(SkipSimplifiedLayerNormalizationTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
-      {1, 1}, {2, 3}, {4, 8}, {64, 128}, {128, 256}, {256, 512}, {1024, 128},
+      {1, 1},
+      {2, 3},
+      {4, 8},
+      {64, 128},
+      {128, 256},
+      {256, 512},
+      {1024, 128},
       // docs/01_dev.md (Qwen3-0.6B) shapes.
       {4, 1024},
   };
@@ -89,11 +97,11 @@ TEST_F(SkipSimplifiedLayerNormalizationTest, InvalidInputs) {
   auto gamma = generate_random_vector<float>(8);
 
   EXPECT_THROW(
-      skip_simplified_layer_normalization(
+      skip_simplified_layer_normalization<float>(
           input, generate_random_matrix<float>(3, 8), gamma, 1e-5f),
       std::invalid_argument);
   EXPECT_THROW(
-      skip_simplified_layer_normalization(
+      skip_simplified_layer_normalization<float>(
           input, generate_random_matrix<float>(4, 8),
           generate_random_vector<float>(7), 1e-5f),
       std::invalid_argument);

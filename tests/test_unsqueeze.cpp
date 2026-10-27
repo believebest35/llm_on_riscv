@@ -54,8 +54,15 @@ class UnsqueezeTest : public GTestBase {
 
 TEST_F(UnsqueezeTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
-      {1, 1}, {5, 0}, {5, 1}, {10, 0}, {100, 0}, {100, 1}, {5, -2}, {10, -1},
-      // docs/01_dev.md (Qwen3-0.6B) shapes: scalar () -> (1,).
+      {1, 1},
+      {5, 0},
+      {5, 1},
+      {10, 0},
+      {100, 0},
+      {100, 1},
+      {5, -2},
+      {10, -1},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
       {1, 0},
   };
 

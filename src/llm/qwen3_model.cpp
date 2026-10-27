@@ -100,8 +100,9 @@ Eigen::MatrixXf Qwen3Model::forward(
     Eigen::MatrixXf present_key;
     Eigen::MatrixXf present_value;
     std::tie(attention, present_key, present_value) = group_query_attention(
-        query, key, value, caches_[layer_index].key, caches_[layer_index].value,
-        total_sequence - 1, total_sequence);
+        query, key, value, caches_[layer_index].key,
+        caches_[layer_index].value, Qwen3Config::kQueryHeads,
+        Qwen3Config::kKvHeads, total_sequence - 1, total_sequence);
     caches_[layer_index].key = present_key;
     caches_[layer_index].value = present_value;
 

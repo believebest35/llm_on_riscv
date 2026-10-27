@@ -78,10 +78,15 @@ class RotaryEmbeddingTest : public GTestBase {
 
 TEST_F(RotaryEmbeddingTest, ValidInputs) {
   const std::vector<std::tuple<int, int, int, int, int>> test_cases = {
-      {1, 1, 4, 128, 0},    {2, 2, 4, 128, 0},   {3, 4, 8, 128, 0},
-      {6, 4, 8, 16, 3},     {1, 16, 128, 128, 0}, {3, 16, 128, 128, 0},
-      // docs/01_dev.md (Qwen3-0.6B) shapes, with (40960, 64) caches.
-      {4, 16, 128, 40960, 0}, {4, 8, 128, 40960, 0},
+      {1, 1, 4, 128, 0},
+      {2, 2, 4, 128, 0},
+      {3, 4, 8, 128, 0},
+      {6, 4, 8, 16, 3},
+      {1, 16, 128, 128, 0},
+      {3, 16, 128, 128, 0},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {4, 16, 128, 40960, 0},
+      {4, 8, 128, 40960, 0},
   };
 
   const float tolerance = 0.0f;
@@ -124,6 +129,26 @@ TEST_F(RotaryEmbeddingTest, InvalidInputs) {
   auto bad_cache = generate_random_matrix<float>(16, kHeadDim);
   auto input = generate_random_matrix<float>(2, kHeads * kHeadDim);
   EXPECT_THROW(rotary_embedding<float>(input, 0, bad_cache, sin_cache, kHeads),
+               std::invalid_argument);
+
+  // num_heads must be positive.
+  EXPECT_THROW(rotary_embedding<float>(input, 0, cos_cache, sin_cache, 0),
+               std::invalid_argument);
+
+  // head_dim must be even.
+  auto odd_head_dim_input = generate_random_matrix<float>(2, 12);
+  EXPECT_THROW(rotary_embedding<float>(odd_head_dim_input, 0, cos_cache,
+                                       sin_cache, kHeads),
+               std::invalid_argument);
+
+  // cos_cache and sin_cache must have the same number of rows.
+  Eigen::MatrixXf short_sin_cache = sin_cache.topRows(8);
+  EXPECT_THROW(
+      rotary_embedding<float>(input, 0, cos_cache, short_sin_cache, kHeads),
+      std::invalid_argument);
+
+  // position_id must be non-negative.
+  EXPECT_THROW(rotary_embedding<float>(input, -1, cos_cache, sin_cache, kHeads),
                std::invalid_argument);
 
   // position_id + input rows must stay within the cache.

@@ -1,5 +1,3 @@
-#include <cstdint>
-
 #include "core/shape.h"
 #include "gtest_base.h"
 
@@ -23,11 +21,11 @@ class ShapeTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& input,
       Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> impl_output;
-    ASSERT_NO_THROW(impl_output = shape(input))
+    ASSERT_NO_THROW(impl_output = shape<Scalar>(input))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<std::int64_t, Eigen::Dynamic, Eigen::Dynamic> golden_output;
-    ASSERT_NO_THROW(golden_output = golden_reference_shape(input))
+    ASSERT_NO_THROW(golden_output = golden_reference_shape<Scalar>(input))
         << "Golden reference failed: " << test_description;
 
     expect_matrix_near(impl_output, golden_output, tolerance, test_description);
@@ -36,9 +34,16 @@ class ShapeTest : public GTestBase {
 
 TEST_F(ShapeTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
-      {1, 1}, {1, 1024}, {1024, 1}, {2, 3}, {64, 64}, {256, 256}, {1024, 2048},
+      {1, 1},
+      {1, 1024},
+      {1024, 1},
+      {2, 3},
+      {64, 64},
+      {256, 256},
+      {1024, 2048},
       // docs/01_dev.md (Qwen3-0.6B) shapes.
-      {1, 4}, {1, 7},
+      {1, 4},
+      {1, 7},
   };
 
   const float tolerance = 0.0f;

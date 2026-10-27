@@ -1,5 +1,3 @@
-#include <algorithm>
-
 #include "core/sub.h"
 #include "gtest_base.h"
 
@@ -39,11 +37,11 @@ class SubTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B,
       Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_output;
-    ASSERT_NO_THROW(impl_output = sub(A, B))
+    ASSERT_NO_THROW(impl_output = sub<Scalar>(A, B))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_output;
-    ASSERT_NO_THROW(golden_output = golden_reference_sub(A, B))
+    ASSERT_NO_THROW(golden_output = golden_reference_sub<Scalar>(A, B))
         << "Golden reference failed: " << test_description;
 
     expect_matrix_near(impl_output, golden_output, tolerance, test_description);
@@ -52,12 +50,17 @@ class SubTest : public GTestBase {
 
 TEST_F(SubTest, ValidInputs) {
   const std::vector<std::tuple<int, int, int, int>> test_cases = {
-      {1, 1, 1, 1},             {1, 1024, 1, 1024},
-      {1024, 1, 1024, 1},       {2, 3, 2, 3},
-      {64, 64, 64, 64},         {256, 256, 256, 256},
-      {1024, 1024, 1024, 1024}, {1024, 2048, 1024, 2048},
-      {1024, 3072, 1024, 3072}, {2048, 1024, 2048, 1024},
-      // docs/01_dev.md (Qwen3-0.6B) shapes: (batch, 1) - scalar.
+      {1, 1, 1, 1},
+      {1, 1024, 1, 1024},
+      {1024, 1, 1024, 1},
+      {2, 3, 2, 3},
+      {64, 64, 64, 64},
+      {256, 256, 256, 256},
+      {1024, 1024, 1024, 1024},
+      {1024, 2048, 1024, 2048},
+      {1024, 3072, 1024, 3072},
+      {2048, 1024, 2048, 1024},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
       {4, 1, 1, 1},
   };
 
@@ -78,8 +81,8 @@ TEST_F(SubTest, ValidInputs) {
 TEST_F(SubTest, InvalidInputs) {
   auto A = generate_random_matrix<float>(2, 3);
   auto B = generate_random_matrix<float>(3, 2);
-  EXPECT_THROW(sub(A, B), std::invalid_argument);
+  EXPECT_THROW(sub<float>(A, B), std::invalid_argument);
 
   auto other = generate_random_matrix<float>(2, 2);
-  EXPECT_THROW(sub(A, other), std::invalid_argument);
+  EXPECT_THROW(sub<float>(A, other), std::invalid_argument);
 }

@@ -6,7 +6,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <iostream>
+#include <limits>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <tuple>

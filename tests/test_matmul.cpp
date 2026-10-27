@@ -36,11 +36,11 @@ class MatMulTest : public GTestBase {
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B,
       Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_output;
-    ASSERT_NO_THROW(impl_output = matmul(A, B))
+    ASSERT_NO_THROW(impl_output = matmul<Scalar>(A, B))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_output;
-    ASSERT_NO_THROW(golden_output = golden_reference_matmul(A, B))
+    ASSERT_NO_THROW(golden_output = golden_reference_matmul<Scalar>(A, B))
         << "Golden reference failed: " << test_description;
 
     expect_matrix_near(impl_output, golden_output, tolerance, test_description);
@@ -49,11 +49,20 @@ class MatMulTest : public GTestBase {
 
 TEST_F(MatMulTest, ValidInputs) {
   const std::vector<std::tuple<int, int, int>> test_cases = {
-      {1, 1, 1},    {1, 1024, 1},    {1024, 1, 2048},    {2, 3, 4},
-      {64, 64, 64}, {256, 256, 256}, {1024, 1024, 2048},
+      {1, 1, 1},
+      {1, 1024, 1},
+      {1024, 1, 2048},
+      {2, 3, 4},
+      {64, 64, 64},
+      {256, 256, 256},
+      {1024, 1024, 2048},
       // docs/01_dev.md (Qwen3-0.6B) shapes.
-      {4, 1024, 2048},   {4, 1024, 1024},  {4, 2048, 1024},
-      {4, 1024, 3072},   {4, 3072, 1024},  {4, 1024, 151936},
+      {4, 1024, 2048},
+      {4, 1024, 1024},
+      {4, 2048, 1024},
+      {4, 1024, 3072},
+      {4, 3072, 1024},
+      {4, 1024, 151936},
   };
 
   const float tolerance = 1e-2f;
@@ -73,5 +82,5 @@ TEST_F(MatMulTest, ValidInputs) {
 TEST_F(MatMulTest, InvalidInputs) {
   auto A = generate_random_matrix<float>(2, 3);
   auto B = generate_random_matrix<float>(4, 5);
-  EXPECT_THROW(matmul(A, B), std::invalid_argument);
+  EXPECT_THROW(matmul<float>(A, B), std::invalid_argument);
 }

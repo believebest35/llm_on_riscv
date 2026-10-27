@@ -36,16 +36,20 @@ class ConstantTest : public GTestBase {
 
 TEST_F(ConstantTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
-      {2, 3}, {64, 64}, {128, 256}, {1024, 1024}, {4, 1024},
-      // docs/01_dev.md (Qwen3-0.6B) shapes: scalar () and 1-D vectors (1,)
-      // and (3,), represented as 1x1 and 3x1.
-      {1, 1}, {3, 1},
+      {2, 3},
+      {64, 64},
+      {128, 256},
+      {1024, 1024},
+      {4, 1024},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {1, 1},
+      {3, 1},
   };
 
   const float tolerance = 0.0f;
 
   for (const auto& [rows, cols] : test_cases) {
-    auto input = generate_random_matrix<float>(rows, cols, -1.0, 1.0);
+    auto input = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
 
     std::string test_name = "Constant " + std::to_string(rows) + "x" +
                             std::to_string(cols);

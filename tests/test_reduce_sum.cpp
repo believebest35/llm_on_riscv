@@ -1,5 +1,3 @@
-#include <set>
-
 #include "core/reduce_sum.h"
 #include "gtest_base.h"
 
@@ -73,17 +71,23 @@ class ReduceSumTest : public GTestBase {
 
 TEST_F(ReduceSumTest, ValidInputs) {
   const std::vector<std::tuple<int, int, std::vector<int>>> test_cases = {
-      {3, 4, {0}},      {3, 4, {1}},        {3, 4, {0, 1}},
-      {5, 5, {0}},      {10, 20, {1}},      {64, 128, {0}},
-      {128, 64, {1}},   {256, 256, {0, 1}},
-      // Negative axes are used by the Qwen3 graph.
-      {3, 4, {-1}},      {3, 4, {-2}},      {3, 4, {-1, -2}},
+      {3, 4, {0}},
+      {3, 4, {1}},
+      {3, 4, {0, 1}},
+      {5, 5, {0}},
+      {10, 20, {1}},
+      {64, 128, {0}},
+      {128, 64, {1}},
+      {256, 256, {0, 1}},
+      {3, 4, {-1}},
+      {3, 4, {-2}},
+      {3, 4, {-1, -2}},
       // docs/01_dev.md (Qwen3-0.6B) shapes.
       {1, 7, {-1}},
   };
 
   // Float accumulation over large reductions differs from the exact sum.
-  const float tolerance = 1e-3;
+  const float tolerance = 1e-3f;
 
   for (const auto& [rows, cols, axes] : test_cases) {
     auto input = generate_random_matrix<float>(rows, cols, -3.0f, 3.0f);

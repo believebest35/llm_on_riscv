@@ -64,12 +64,17 @@ class ConcatTest : public GTestBase {
 
 TEST_F(ConcatTest, ValidInputs) {
   const std::vector<std::tuple<int, int, int, int, int>> test_cases = {
-      {2, 3, 1, 3, 0}, {2, 2, 2, 1, 1}, {3, 4, 2, 4, 0},
-      {5, 2, 5, 3, 1}, {64, 128, 32, 128, 0}, {128, 64, 128, 64, 1},
-      {2, 3, 1, 3, -2}, {2, 2, 2, 1, -1},
-      // docs/01_dev.md (Qwen3-0.6B) shapes: scalar + 1-D vector with the
-      // rank-0/1 convention (1x1 scalar, Nx1 vector).
-      {1, 1, 1, 1, 0}, {1, 1, 3, 1, 0},
+      {2, 3, 1, 3, 0},
+      {2, 2, 2, 1, 1},
+      {3, 4, 2, 4, 0},
+      {5, 2, 5, 3, 1},
+      {64, 128, 32, 128, 0},
+      {128, 64, 128, 64, 1},
+      {2, 3, 1, 3, -2},
+      {2, 2, 2, 1, -1},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
+      {1, 1, 1, 1, 0},
+      {1, 1, 3, 1, 0},
   };
 
   const float tolerance = 0.0f;

@@ -34,12 +34,13 @@ class SimplifiedLayerNormalizationTest : public GTestBase {
       Scalar tolerance, const std::string& test_description = "") {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> impl_output;
     ASSERT_NO_THROW(impl_output =
-                        simplified_layer_normalization(input, scale, epsilon))
+                        simplified_layer_normalization<Scalar>(input, scale,
+                                                               epsilon))
         << "Implementation failed: " << test_description;
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> golden_output;
     ASSERT_NO_THROW(
-        golden_output = golden_reference_simplified_layer_normalization(
+        golden_output = golden_reference_simplified_layer_normalization<Scalar>(
             input, scale, epsilon))
         << "Golden reference failed: " << test_description;
 
@@ -49,8 +50,14 @@ class SimplifiedLayerNormalizationTest : public GTestBase {
 
 TEST_F(SimplifiedLayerNormalizationTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
-      {1, 1},     {2, 3},      {4, 8},      {64, 128},
-      {128, 256}, {256, 1024}, {1024, 128}, {1024, 3072},
+      {1, 1},
+      {2, 3},
+      {4, 8},
+      {64, 128},
+      {128, 256},
+      {256, 1024},
+      {1024, 128},
+      {1024, 3072},
       // docs/01_dev.md (Qwen3-0.6B) shapes.
       {4, 1024},
   };
@@ -73,6 +80,7 @@ TEST_F(SimplifiedLayerNormalizationTest, ValidInputs) {
 TEST_F(SimplifiedLayerNormalizationTest, InvalidInputs) {
   auto input = generate_random_matrix<float>(4, 8);
   auto bad_scale = generate_random_vector<float>(7);
-  EXPECT_THROW(simplified_layer_normalization(input, bad_scale, 1e-5f),
-               std::invalid_argument);
+  EXPECT_THROW(
+      simplified_layer_normalization<float>(input, bad_scale, 1e-5f),
+      std::invalid_argument);
 }

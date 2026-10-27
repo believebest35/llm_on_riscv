@@ -35,9 +35,13 @@ class CastTest : public GTestBase {
 
 TEST_F(CastTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
-      {1, 1024}, {1024, 1}, {2, 3}, {64, 64}, {256, 256}, {1024, 1024},
-      // docs/01_dev.md (Qwen3-0.6B) shapes: scalar () and (batch, 1);
-      // batch is fixed to 1, so both are represented as 1x1.
+      {1, 1024},
+      {1024, 1},
+      {2, 3},
+      {64, 64},
+      {256, 256},
+      {1024, 1024},
+      // docs/01_dev.md (Qwen3-0.6B) shapes.
       {1, 1},
   };
 

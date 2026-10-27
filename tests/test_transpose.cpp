@@ -36,7 +36,12 @@ class TransposeTest : public GTestBase {
 
 TEST_F(TransposeTest, ValidInputs) {
   const std::vector<std::tuple<int, int>> test_cases = {
-      {1, 1}, {1, 1024}, {1024, 1}, {2, 3}, {64, 128}, {256, 512},
+      {1, 1},
+      {1, 1024},
+      {1024, 1},
+      {2, 3},
+      {64, 128},
+      {256, 512},
       // docs/01_dev.md (Qwen3-0.6B) shapes.
       {151936, 1024},
   };
