@@ -21,32 +21,32 @@ class ReduceSumTest : public GTestBase {
 
     if (unique_axes.size() == 2) {
       Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(1, 1);
-      double total = 0.0;
+      Scalar total = static_cast<Scalar>(0);
       for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
-          total += static_cast<double>(input(i, j));
+          total += input(i, j);
         }
       }
-      output(0, 0) = static_cast<Scalar>(total);
+      output(0, 0) = total;
       return output;
     } else if (*unique_axes.begin() == 0) {
       Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(1, cols);
       for (int j = 0; j < cols; ++j) {
-        double total = 0.0;
+        Scalar total = static_cast<Scalar>(0);
         for (int i = 0; i < rows; ++i) {
-          total += static_cast<double>(input(i, j));
+          total += input(i, j);
         }
-        output(0, j) = static_cast<Scalar>(total);
+        output(0, j) = total;
       }
       return output;
     } else {
       Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(rows, 1);
       for (int i = 0; i < rows; ++i) {
-        double total = 0.0;
+        Scalar total = static_cast<Scalar>(0);
         for (int j = 0; j < cols; ++j) {
-          total += static_cast<double>(input(i, j));
+          total += input(i, j);
         }
-        output(i, 0) = static_cast<Scalar>(total);
+        output(i, 0) = total;
       }
       return output;
     }
@@ -93,15 +93,15 @@ TEST_F(ReduceSumTest, ValidInputs) {
     auto input = generate_random_matrix<float>(rows, cols, -3.0f, 3.0f);
 
     std::string axes_str;
-    for (size_t i = 0; i < axes.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(axes.size()); ++i) {
       if (i > 0) axes_str += ",";
       axes_str += std::to_string(axes[i]);
     }
 
-    std::string test_name = "ReduceSum " + std::to_string(rows) + "x" +
+    std::string test_description = "ReduceSum " + std::to_string(rows) + "x" +
                             std::to_string(cols) + " axes={" + axes_str + "}";
 
-    test_with_golden(input, axes, tolerance, test_name);
+    test_with_golden(input, axes, tolerance, test_description);
   }
 }
 

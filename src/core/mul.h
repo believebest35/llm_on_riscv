@@ -6,7 +6,7 @@
 #include <string>
 
 /**
- * @brief Perform element-wise multiplication using Eigen library.
+ * @brief Perform element-wise multiplication using Eigen library (ONNX `Mul`).
  *
  * @tparam Scalar Data type (float, double, etc.)
  * @param A Left matrix (m x n)

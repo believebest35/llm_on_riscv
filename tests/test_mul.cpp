@@ -8,19 +8,13 @@ class MulTest : public GTestBase {
   golden_reference_mul(
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& A,
       const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>& B) {
-    const int m = static_cast<int>(A.rows());
-    const int n = static_cast<int>(A.cols());
-    const int b_rows = static_cast<int>(B.rows());
-    const int b_cols = static_cast<int>(B.cols());
+    const int rows = static_cast<int>(A.rows());
+    const int cols = static_cast<int>(A.cols());
 
-    if (m != b_rows || n != b_cols) {
-      throw std::invalid_argument("Matrix dimensions incompatible");
-    }
+    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(rows, cols);
 
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(m, n);
-
-    for (int i = 0; i < m; ++i) {
-      for (int j = 0; j < n; ++j) {
+    for (int i = 0; i < rows; ++i) {
+      for (int j = 0; j < cols; ++j) {
         output(i, j) = A(i, j) * B(i, j);
       }
     }
@@ -66,10 +60,11 @@ TEST_F(MulTest, ValidInputs) {
     auto A = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
     auto B = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
 
-    std::string test_name = "Mul " + std::to_string(rows) + "x" +
-                            std::to_string(cols) + " element-wise multiply";
+    std::string test_description = "Mul " + std::to_string(rows) + "x" +
+                            std::to_string(cols) + " * " +
+                            std::to_string(rows) + "x" + std::to_string(cols);
 
-    test_with_golden(A, B, tolerance, test_name);
+    test_with_golden(A, B, tolerance, test_description);
   }
 }
 

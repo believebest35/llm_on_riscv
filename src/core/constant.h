@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 
 /**
- * @brief Return a constant matrix tensor.
+ * @brief Return a constant matrix tensor (ONNX `Constant`).
  *
  * This helper mirrors the behavior of the ONNX `Constant` operator where the
  * constant is provided directly as a matrix tensor. Every input is valid; this

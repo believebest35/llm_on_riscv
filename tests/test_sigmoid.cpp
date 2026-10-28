@@ -54,9 +54,9 @@ TEST_F(SigmoidTest, ValidInputs) {
   for (const auto& [rows, cols] : test_cases) {
     auto input = generate_random_matrix<float>(rows, cols, -5.0f, 5.0f);
 
-    std::string test_name = "Sigmoid " + std::to_string(rows) + "x" +
+    std::string test_description = "Sigmoid " + std::to_string(rows) + "x" +
                             std::to_string(cols);
 
-    test_with_golden(input, tolerance, test_name);
+    test_with_golden(input, tolerance, test_description);
   }
 }

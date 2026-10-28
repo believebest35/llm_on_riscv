@@ -5,7 +5,8 @@
 #include <cstdint>
 
 /**
- * @brief Compute the shape of a matrix and return it as an int64 vector.
+ * @brief Compute the shape of a matrix and return it as an int64 vector
+ *        (ONNX `Shape`).
  *
  * The result is a 2x1 column vector where the first element is the number of
  * rows and the second element is the number of columns of the input matrix.

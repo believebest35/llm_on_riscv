@@ -77,12 +77,12 @@ TEST_F(ReshapeTest, ValidInputs) {
   for (const auto& [rows, cols, new_rows, new_cols] : test_cases) {
     auto input = generate_random_matrix<float>(rows, cols, -5.0f, 5.0f);
 
-    std::string test_name = "Reshape " + std::to_string(rows) + "x" +
+    std::string test_description = "Reshape " + std::to_string(rows) + "x" +
                             std::to_string(cols) + " -> " +
                             std::to_string(new_rows) + "x" +
                             std::to_string(new_cols);
 
-    test_with_golden(input, new_rows, new_cols, tolerance, test_name);
+    test_with_golden(input, new_rows, new_cols, tolerance, test_description);
   }
 }
 

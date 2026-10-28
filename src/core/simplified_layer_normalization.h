@@ -7,7 +7,8 @@
 #include <string>
 
 /**
- * @brief SimplifiedLayerNormalization (RMSNorm-style) over the last dimension.
+ * @brief SimplifiedLayerNormalization (RMSNorm-style) over the last dimension
+ *        (ONNX `SimplifiedLayerNormalization`).
  *
  * Inputs: `input`, `scale`. Output: `output` (return value). Optional
  * `epsilon` for numerical stability (default 1e-5).

@@ -6,7 +6,8 @@
 #include <string>
 
 /**
- * @brief Apply rotary positional embeddings with a precomputed cos/sin cache.
+ * @brief Apply rotary positional embeddings with a precomputed cos/sin cache
+ *        (ONNX `RotaryEmbedding`).
  *
  * Batch size is fixed to 1, so the input is (sequence_length, hidden_dim).
  * position_id is the absolute position of the first row: 0 for prefill, the

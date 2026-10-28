@@ -51,10 +51,10 @@ TEST_F(ConstantTest, ValidInputs) {
   for (const auto& [rows, cols] : test_cases) {
     auto input = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
 
-    std::string test_name = "Constant " + std::to_string(rows) + "x" +
+    std::string test_description = "Constant " + std::to_string(rows) + "x" +
                             std::to_string(cols);
 
-    test_with_golden(input, tolerance, test_name);
+    test_with_golden(input, tolerance, test_description);
   }
 }
 

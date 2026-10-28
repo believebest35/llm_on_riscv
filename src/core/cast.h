@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 
 /**
- * @brief Cast matrix elements from one scalar type to another.
+ * @brief Cast matrix elements from one scalar type to another (ONNX `Cast`).
  *
  * This helper mirrors the ONNX `Cast` operator with the simplest semantics:
  * perform a C++ static_cast on each element. Only numeric scalar types that

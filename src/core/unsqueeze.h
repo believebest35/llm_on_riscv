@@ -40,12 +40,12 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> unsqueeze(
 
   const int rows = static_cast<int>(input.rows());
   const int cols = static_cast<int>(input.cols());
-  const int N = rows * cols;
+  const int num_elements = rows * cols;
   Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output;
   if (axis == 0) {
-    output.resize(1, N);
+    output.resize(1, num_elements);
   } else {
-    output.resize(N, 1);
+    output.resize(num_elements, 1);
   }
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {

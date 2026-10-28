@@ -79,16 +79,16 @@ TEST_F(ConcatTest, ValidInputs) {
 
   const float tolerance = 0.0f;
 
-  for (const auto& [rA, cA, rB, cB, axis] : test_cases) {
-    auto A = generate_random_matrix<float>(rA, cA, -1.0f, 1.0f);
-    auto B = generate_random_matrix<float>(rB, cB, -1.0f, 1.0f);
+  for (const auto& [a_rows, a_cols, b_rows, b_cols, axis] : test_cases) {
+    auto A = generate_random_matrix<float>(a_rows, a_cols, -1.0f, 1.0f);
+    auto B = generate_random_matrix<float>(b_rows, b_cols, -1.0f, 1.0f);
 
-    std::string test_name = "Concat " + std::to_string(rA) + "x" +
-                            std::to_string(cA) + " + " + std::to_string(rB) +
-                            "x" + std::to_string(cB) +
-                            " axis=" + std::to_string(axis);
+    std::string test_description =
+        "Concat " + std::to_string(a_rows) + "x" + std::to_string(a_cols) +
+        " + " + std::to_string(b_rows) + "x" + std::to_string(b_cols) +
+        " axis=" + std::to_string(axis);
 
-    test_with_golden(A, B, axis, tolerance, test_name);
+    test_with_golden(A, B, axis, tolerance, test_description);
   }
 }
 

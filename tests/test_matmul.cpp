@@ -10,11 +10,6 @@ class MatMulTest : public GTestBase {
     const int m = static_cast<int>(A.rows());
     const int n = static_cast<int>(A.cols());
     const int p = static_cast<int>(B.cols());
-    const int b_rows = static_cast<int>(B.rows());
-
-    if (n != b_rows) {
-      throw std::invalid_argument("Matrix dimensions incompatible");
-    }
 
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(m, p);
 
@@ -71,11 +66,11 @@ TEST_F(MatMulTest, ValidInputs) {
     auto A = generate_random_matrix<float>(m, n, -1.0f, 1.0f);
     auto B = generate_random_matrix<float>(n, p, -1.0f, 1.0f);
 
-    std::string test_name = "MatMul " + std::to_string(m) + "x" +
+    std::string test_description = "MatMul " + std::to_string(m) + "x" +
                             std::to_string(n) + " * " + std::to_string(n) +
                             "x" + std::to_string(p);
 
-    test_with_golden(A, B, tolerance, test_name);
+    test_with_golden(A, B, tolerance, test_description);
   }
 }
 

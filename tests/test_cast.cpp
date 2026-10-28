@@ -54,9 +54,10 @@ TEST_F(CastTest, ValidInputs) {
         std::to_string(rows) + "x" + std::to_string(cols);
 
     test_with_golden<float, float>(input, tolerance,
-                                   "Cast float->float " + shape);
+                                   "Cast " + shape + " to=float");
     test_with_golden<double, float>(input, tolerance,
-                                    "Cast float->double " + shape);
-    test_with_golden<int, float>(input, tolerance, "Cast float->int " + shape);
+                                    "Cast " + shape + " to=double");
+    test_with_golden<int, float>(input, tolerance,
+                                 "Cast " + shape + " to=int");
   }
 }

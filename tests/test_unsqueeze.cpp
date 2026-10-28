@@ -13,9 +13,10 @@ class UnsqueezeTest : public GTestBase {
     }
     const int rows = static_cast<int>(input.rows());
     const int cols = static_cast<int>(input.cols());
-    const int N = rows * cols;
+    const int num_elements = rows * cols;
     if (axis == 0) {
-      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(1, N);
+      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(
+          1, num_elements);
       int k = 0;
       for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
@@ -24,7 +25,8 @@ class UnsqueezeTest : public GTestBase {
       }
       return output;
     } else {
-      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(N, 1);
+      Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(
+          num_elements, 1);
       int k = 0;
       for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
@@ -71,10 +73,10 @@ TEST_F(UnsqueezeTest, ValidInputs) {
   for (const auto& [size, axis] : test_cases) {
     auto input = generate_random_vector<float>(size, -2.0f, 2.0f);
 
-    std::string test_name = "Unsqueeze size=" + std::to_string(size) +
-                            " axis=" + std::to_string(axis);
+    std::string test_description = "Unsqueeze " + std::to_string(size) +
+                            "x1 axis=" + std::to_string(axis);
 
-    test_with_golden<float>(input, axis, tolerance, test_name);
+    test_with_golden<float>(input, axis, tolerance, test_description);
   }
 }
 

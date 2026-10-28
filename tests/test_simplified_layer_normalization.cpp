@@ -69,11 +69,11 @@ TEST_F(SimplifiedLayerNormalizationTest, ValidInputs) {
     auto input = generate_random_matrix<float>(rows, cols, -1.0f, 1.0f);
     auto scale = generate_random_vector<float>(cols, 0.5f, 1.5f);
 
-    std::string test_name =
+    std::string test_description =
         "SimplifiedLayerNormalization " + std::to_string(rows) + "x" +
         std::to_string(cols);
 
-    test_with_golden(input, scale, epsilon, tolerance, test_name);
+    test_with_golden(input, scale, epsilon, tolerance, test_description);
   }
 }
 

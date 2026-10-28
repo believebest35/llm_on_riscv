@@ -7,7 +7,8 @@
 #include <string>
 
 /**
- * @brief Perform element-wise subtraction with Numpy-style broadcasting.
+ * @brief Perform element-wise subtraction with Numpy-style broadcasting
+ *        (ONNX `Sub`).
  *
  * Both operands are 2-D matrices. A dimension of size 1 is broadcast to the
  * other operand's size, matching ONNX `Sub` for 2-D tensors.

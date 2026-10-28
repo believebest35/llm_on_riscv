@@ -84,11 +84,11 @@ TEST_F(SkipSimplifiedLayerNormalizationTest, ValidInputs) {
     auto skip = generate_random_matrix<float>(rows, cols, -0.5f, 0.5f);
     auto gamma = generate_random_vector<float>(cols, 0.5f, 1.5f);
 
-    std::string test_name =
+    std::string test_description =
         "SkipSimplifiedLayerNormalization " + std::to_string(rows) + "x" +
         std::to_string(cols);
 
-    test_with_golden(input, skip, gamma, epsilon, tolerance, test_name);
+    test_with_golden(input, skip, gamma, epsilon, tolerance, test_description);
   }
 }
 

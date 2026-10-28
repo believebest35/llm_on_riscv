@@ -92,24 +92,24 @@ TEST_F(GatherTest, ValidInputs) {
 
   const float tolerance = 0.0f;
 
-  for (const auto& [rows, cols, num_idx, axis] : test_cases) {
+  for (const auto& [rows, cols, num_indices, axis] : test_cases) {
     auto input = generate_random_matrix<float>(rows, cols, -10.0f, 10.0f);
     const int norm_axis = (axis < 0) ? axis + 2 : axis;
     const int axis_size = (norm_axis == 0) ? rows : cols;
     auto int_indices =
-        generate_random_indices<int>(num_idx, -axis_size, axis_size - 1);
+        generate_random_indices<int>(num_indices, -axis_size, axis_size - 1);
     auto int64_indices = generate_random_indices<std::int64_t>(
-        num_idx, -axis_size, axis_size - 1);
+        num_indices, -axis_size, axis_size - 1);
 
-    std::string test_name = "Gather " + std::to_string(rows) + "x" +
-                            std::to_string(cols) + " num_idx=" +
-                            std::to_string(num_idx) +
+    std::string test_description = "Gather " + std::to_string(rows) + "x" +
+                            std::to_string(cols) + " indices=1x" +
+                            std::to_string(num_indices) +
                             " axis=" + std::to_string(axis);
 
     test_with_golden<float, int>(input, int_indices, axis, tolerance,
-                                 test_name);
+                                 test_description + " dtype=int");
     test_with_golden<float, std::int64_t>(input, int64_indices, axis, tolerance,
-                                          test_name + " int64");
+                                          test_description + " dtype=int64");
   }
 }
 

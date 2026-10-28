@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 
 /**
- * @brief Return the transpose of a matrix.
+ * @brief Return the transpose of a matrix (ONNX `Transpose`).
  *
  * A thin wrapper around Eigen's `transpose()` method; kept as a separate
  * helper to mirror ONNX `Transpose` semantics and to provide a consistent

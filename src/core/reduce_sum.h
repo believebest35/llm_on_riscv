@@ -38,29 +38,15 @@ Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> reduce_sum(
     unique_axes.insert(a);
   }
 
-  const int rows = static_cast<int>(input.rows());
-  const int cols = static_cast<int>(input.cols());
-
   if (unique_axes.size() == 2) {
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(1, 1);
     output(0, 0) = input.sum();
     return output;
-  } else if (*unique_axes.begin() == 0) {
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(1, cols);
-    output.setZero();
-    for (int i = 0; i < rows; ++i) {
-      output += input.row(i);
-    }
-    return output;
-  } else {
-    // axis 1 only
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(rows, 1);
-    output.setZero();
-    for (int i = 0; i < rows; ++i) {
-      output(i, 0) = input.row(i).sum();
-    }
-    return output;
   }
+  if (*unique_axes.begin() == 0) {
+    return input.colwise().sum();
+  }
+  return input.rowwise().sum();
 }
 
 #endif  // REDUCE_SUM_H

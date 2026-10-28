@@ -6,7 +6,7 @@
 #include <string>
 
 /**
- * @brief Perform matrix multiplication using Eigen library.
+ * @brief Perform matrix multiplication using Eigen library (ONNX `MatMul`).
  *
  * @tparam Scalar Data type (float, double, etc.)
  * @param A Left matrix (m x n)

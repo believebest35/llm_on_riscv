@@ -9,8 +9,8 @@
 
 /**
  * @brief SkipSimplifiedLayerNormalization: adds skip (residual) to the input
- * and performs simplified layer normalization (RMS-style) over the last
- * dimension.
+ *        and performs simplified layer normalization (RMS-style) over the
+ *        last dimension (ONNX `SkipSimplifiedLayerNormalization`).
  *
  * output = ( (input + skip) / rms ) * gamma
  *

@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 
 /**
- * @brief Apply element-wise sigmoid function to a matrix.
+ * @brief Apply element-wise sigmoid function to a matrix (ONNX `Sigmoid`).
  *
  * Computes 1 / (1 + exp(-input)) for each entry of the input matrix, mirroring
  * the ONNX `Sigmoid` operator. Every input is valid; this kernel does not

@@ -152,98 +152,99 @@ TEST_F(GroupQueryAttentionTest, ValidInputs) {
 
   const float tolerance = 1e-6f;
 
-  for (const auto& [seq, past_seq, num_heads, kv_num_heads, head_dim] :
-       test_cases) {
-    const int total_seq = past_seq + seq;
-    const int seqlens_k = total_seq - 1;
+  for (const auto& [sequence, past_sequence, num_heads, kv_num_heads,
+                    head_dim] : test_cases) {
+    const int total_sequence_length = past_sequence + sequence;
+    const int seqlens_k = total_sequence_length - 1;
 
-    auto query = generate_random_matrix<float>(seq, num_heads * head_dim,
-                                              -0.5f, 0.5f);
-    auto key = generate_random_matrix<float>(seq, kv_num_heads * head_dim,
-                                             -0.5f, 0.5f);
-    auto value = generate_random_matrix<float>(seq, kv_num_heads * head_dim,
+    auto query = generate_random_matrix<float>(sequence, num_heads * head_dim,
                                                -0.5f, 0.5f);
+    auto key = generate_random_matrix<float>(sequence, kv_num_heads * head_dim,
+                                             -0.5f, 0.5f);
+    auto value = generate_random_matrix<float>(
+        sequence, kv_num_heads * head_dim, -0.5f, 0.5f);
     auto past_key = generate_random_matrix<float>(
-        kv_num_heads * past_seq, head_dim, -0.5f, 0.5f);
+        kv_num_heads * past_sequence, head_dim, -0.5f, 0.5f);
     auto past_value = generate_random_matrix<float>(
-        kv_num_heads * past_seq, head_dim, -0.5f, 0.5f);
+        kv_num_heads * past_sequence, head_dim, -0.5f, 0.5f);
 
-    std::string test_name =
-        "GQA seq=" + std::to_string(seq) +
-        " past_seq=" + std::to_string(past_seq) +
-        " heads=" + std::to_string(num_heads) +
-        " kv_heads=" + std::to_string(kv_num_heads) +
-        " head_dim=" + std::to_string(head_dim);
+    std::string test_description =
+        "GroupQueryAttention " + std::to_string(sequence) + "x" +
+        std::to_string(num_heads * head_dim) + " past_sequence=" +
+        std::to_string(past_sequence) + " num_heads=" +
+        std::to_string(num_heads) + " kv_num_heads=" +
+        std::to_string(kv_num_heads) + " head_dim=" +
+        std::to_string(head_dim);
 
     test_with_golden(query, key, value, past_key, past_value, num_heads,
-                     kv_num_heads, seqlens_k, total_seq, tolerance,
-                     test_name);
+                     kv_num_heads, seqlens_k, total_sequence_length,
+                     tolerance, test_description);
   }
 }
 
 TEST_F(GroupQueryAttentionTest, InvalidInputs) {
-  constexpr int kSeq = 2;
+  const int sequence = 2;
 
-  auto query = generate_random_matrix<float>(kSeq, 2048, -0.5f, 0.5f);
-  auto key = generate_random_matrix<float>(kSeq, 1024, -0.5f, 0.5f);
-  auto value = generate_random_matrix<float>(kSeq, 1024, -0.5f, 0.5f);
+  auto query = generate_random_matrix<float>(sequence, 2048, -0.5f, 0.5f);
+  auto key = generate_random_matrix<float>(sequence, 1024, -0.5f, 0.5f);
+  auto value = generate_random_matrix<float>(sequence, 1024, -0.5f, 0.5f);
   Eigen::MatrixXf empty_past(0, 128);
 
   // num_heads and kv_num_heads must be positive.
   EXPECT_THROW(group_query_attention<float>(
                    query, key, value, empty_past, empty_past, 0, 8,
-                   kSeq - 1, kSeq),
+                   sequence - 1, sequence),
                std::invalid_argument);
   EXPECT_THROW(group_query_attention<float>(
                    query, key, value, empty_past, empty_past, 16, 0,
-                   kSeq - 1, kSeq),
+                   sequence - 1, sequence),
                std::invalid_argument);
 
   // query hidden size must be divisible by num_heads.
-  auto indivisible_query = generate_random_matrix<float>(kSeq, 2047);
+  auto indivisible_query = generate_random_matrix<float>(sequence, 2047);
   EXPECT_THROW(group_query_attention<float>(
                    indivisible_query, key, value, empty_past, empty_past,
-                   16, 8, kSeq - 1, kSeq),
+                   16, 8, sequence - 1, sequence),
                std::invalid_argument);
 
   // A zero-width query yields head_dim == 0.
-  Eigen::MatrixXf empty_query(kSeq, 0);
-  Eigen::MatrixXf empty_key(kSeq, 0);
-  Eigen::MatrixXf empty_value(kSeq, 0);
+  Eigen::MatrixXf empty_query(sequence, 0);
+  Eigen::MatrixXf empty_key(sequence, 0);
+  Eigen::MatrixXf empty_value(sequence, 0);
   Eigen::MatrixXf empty_zero_past(0, 0);
   EXPECT_THROW(group_query_attention<float>(
                    empty_query, empty_key, empty_value, empty_zero_past,
-                   empty_zero_past, 16, 8, kSeq - 1, kSeq),
+                   empty_zero_past, 16, 8, sequence - 1, sequence),
                std::invalid_argument);
 
   // num_heads must be divisible by kv_num_heads.
-  auto group_query = generate_random_matrix<float>(kSeq, 1536);
-  auto group_key = generate_random_matrix<float>(kSeq, 1024);
-  auto group_value = generate_random_matrix<float>(kSeq, 1024);
+  auto group_query = generate_random_matrix<float>(sequence, 1536);
+  auto group_key = generate_random_matrix<float>(sequence, 1024);
+  auto group_value = generate_random_matrix<float>(sequence, 1024);
   EXPECT_THROW(group_query_attention<float>(
                    group_query, group_key, group_value, empty_past,
-                   empty_past, 12, 8, kSeq - 1, kSeq),
+                   empty_past, 12, 8, sequence - 1, sequence),
                std::invalid_argument);
 
   // query/key/value must share the sequence length.
-  auto short_key = generate_random_matrix<float>(kSeq - 1, 1024);
+  auto short_key = generate_random_matrix<float>(sequence - 1, 1024);
   EXPECT_THROW(group_query_attention<float>(
                    query, short_key, value, empty_past, empty_past,
-                   16, 8, kSeq - 1, kSeq),
+                   16, 8, sequence - 1, sequence),
                std::invalid_argument);
 
   // key/value hidden sizes must equal kv_num_heads * head_dim.
-  auto bad_value = generate_random_matrix<float>(kSeq, 896);
+  auto bad_value = generate_random_matrix<float>(sequence, 896);
   EXPECT_THROW(group_query_attention<float>(
                    query, key, bad_value, empty_past, empty_past,
-                   16, 8, kSeq - 1, kSeq),
+                   16, 8, sequence - 1, sequence),
                std::invalid_argument);
 
   // Past caches must use head_dim columns.
   Eigen::MatrixXf bad_past(0, 64);
   EXPECT_THROW(group_query_attention<float>(
                    query, key, value, bad_past, empty_past, 16, 8,
-                   kSeq - 1, kSeq),
+                   sequence - 1, sequence),
                std::invalid_argument);
 
   // Past key/value caches must share the row count.
@@ -251,7 +252,7 @@ TEST_F(GroupQueryAttentionTest, InvalidInputs) {
   Eigen::MatrixXf mismatched_past_value(8, 128);
   EXPECT_THROW(group_query_attention<float>(
                    query, key, value, mismatched_past_key,
-                   mismatched_past_value, 16, 8, kSeq - 1, kSeq),
+                   mismatched_past_value, 16, 8, sequence - 1, sequence),
                std::invalid_argument);
 
   // Past rows must be divisible by kv_num_heads.
@@ -259,23 +260,23 @@ TEST_F(GroupQueryAttentionTest, InvalidInputs) {
   Eigen::MatrixXf ragged_past_value(1, 128);
   EXPECT_THROW(group_query_attention<float>(
                    query, key, value, ragged_past_key, ragged_past_value,
-                   16, 8, kSeq - 1, kSeq),
+                   16, 8, sequence - 1, sequence),
                std::invalid_argument);
 
   // total_sequence_length must equal past_sequence + sequence.
   EXPECT_THROW(group_query_attention<float>(
                    query, key, value, empty_past, empty_past, 16, 8,
-                   kSeq - 1, kSeq + 1),
+                   sequence - 1, sequence + 1),
                std::invalid_argument);
 
   // seqlens_k is the last valid KV index, so it must be in
   // [0, total_sequence_length).
   EXPECT_THROW(group_query_attention<float>(
                    query, key, value, empty_past, empty_past, 16, 8,
-                   -1, kSeq),
+                   -1, sequence),
                std::invalid_argument);
   EXPECT_THROW(group_query_attention<float>(
                    query, key, value, empty_past, empty_past, 16, 8,
-                   kSeq, kSeq),
+                   sequence, sequence),
                std::invalid_argument);
 }

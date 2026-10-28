@@ -14,10 +14,6 @@ class SubTest : public GTestBase {
     const int b_cols = static_cast<int>(B.cols());
     const int m = std::max(a_rows, b_rows);
     const int n = std::max(a_cols, b_cols);
-    if ((a_rows != m && a_rows != 1) || (a_cols != n && a_cols != 1) ||
-        (b_rows != m && b_rows != 1) || (b_cols != n && b_cols != 1)) {
-      throw std::invalid_argument("Matrix dimensions incompatible");
-    }
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> output(m, n);
     for (int i = 0; i < m; ++i) {
       for (int j = 0; j < n; ++j) {
@@ -66,15 +62,15 @@ TEST_F(SubTest, ValidInputs) {
 
   const float tolerance = 0.0f;
 
-  for (const auto& [rA, cA, rB, cB] : test_cases) {
-    auto A = generate_random_matrix<float>(rA, cA, -1.0f, 1.0f);
-    auto B = generate_random_matrix<float>(rB, cB, -1.0f, 1.0f);
+  for (const auto& [a_rows, a_cols, b_rows, b_cols] : test_cases) {
+    auto A = generate_random_matrix<float>(a_rows, a_cols, -1.0f, 1.0f);
+    auto B = generate_random_matrix<float>(b_rows, b_cols, -1.0f, 1.0f);
 
-    std::string test_name = "Sub " + std::to_string(rA) + "x" +
-                            std::to_string(cA) + " - " + std::to_string(rB) +
-                            "x" + std::to_string(cB);
+    std::string test_description =
+        "Sub " + std::to_string(a_rows) + "x" + std::to_string(a_cols) +
+        " - " + std::to_string(b_rows) + "x" + std::to_string(b_cols);
 
-    test_with_golden(A, B, tolerance, test_name);
+    test_with_golden(A, B, tolerance, test_description);
   }
 }
 
